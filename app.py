@@ -168,7 +168,7 @@ st.dataframe(
 # --------------------------------------------------
 # Debug Info
 # --------------------------------------------------
-with st.expander("🛠 Debug Info"):
+st.expander("🛠 Debug Info"):
 st.write(df.columns.tolist())
 
 
