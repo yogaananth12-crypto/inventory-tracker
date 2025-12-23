@@ -6,7 +6,6 @@ st.set_page_config(
 )
 def load_data():
     df = pd.read_excel("PCB BOARDS (CUP BOARD).xlsx")
-    # Normalize column names (VERY IMPORTANT)
     df.columns = df.columns.str.strip().str.upper()
     return df
 df = load_data()
