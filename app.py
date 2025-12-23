@@ -19,8 +19,8 @@ if low_stock:
     filtered_df = filtered_df[filtered_df["Quantity"] <= 2]
 if critical:
     filtered_df = filtered_df[filtered_df["Critical Part"] == "YES"]
-col1, col2, col3 = st.write("Excel columns:")
-                   st.write(df.columns.tolist())
+    st.write("Excel columns:")
+    st.write(df.columns.tolist())
 col1.metric("Total Parts", len(df))
 col2.metric("Low Stock Items", (df["QTY"] <= 2).sum())
 col3.metric("Critical Parts", (df["Critical Part"] == "YES").sum())
