@@ -46,7 +46,6 @@ st.dataframe(filtered_df, use_container_width=True)
 st.subheader("🚨 Urgent & High Priority Parts")
 priority_df = df[df["PRIORITY LEVEL"].isin(["URGENT", "HIGH"])]
 st.dataframe(priority_df, use_container_width=True)
-st.expander("🔍 Debug: Excel Columns"):
 st.write(df.columns.tolist())
 
 
