@@ -102,7 +102,7 @@ col4.metric("Normal", (df["PRIORITY LEVEL"] == "NORMAL").sum())
 # Main Tables
 # --------------------------------------------------
 st.subheader("📋 Spare Parts List")
-s
+
 
 
 
