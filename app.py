@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 st.set_page_config(page_title="Spare Parts Dashboard", layout="wide")
-@st.cache_data
 def load_data():
     df = pd.read_excel("PCB BOARDS (CUP BOARD).xlsx")
     df.columns = df.columns.str.strip().str.upper()
@@ -48,7 +47,7 @@ st.subheader("🚨 Urgent & High Priority Parts")
 priority_df = df[df["PRIORITY LEVEL"].isin(["URGENT", "HIGH"])]
 st.dataframe(priority_df, use_container_width=True)
 with st.expander("🔍 Debug: Excel Columns"):
-    st.write(df.columns.tolist())
+st.write(df.columns.tolist())
 
 
 
