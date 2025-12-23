@@ -1,7 +1,5 @@
 import streamlit as st
 import pandas as pd
-df=df.loc[:, ~df.columns.str.contains('^unnamed')]
-df.columns = df.columns.str.strip()
 st.set_page_config(page_title="Spare Parts Dashboard", layout="wide")
 def load_data():
     return pd.read_excel("PCB BOARDS (CUP BOARD).xlsx")
