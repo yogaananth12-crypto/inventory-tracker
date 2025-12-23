@@ -143,15 +143,17 @@ styled_df = filtered_df.style.apply(highlight_priority, axis=1)
 
 st.dataframe(styled_df, use_container_width=True)
 
+from io import BytesIO
+import pandas as pd
+import streamlit as st
 output = BytesIO()
-filtered_df.to_excel(output, index=False, engine="openpyxl")
+df.to_excel(output, index=False)
 st.download_button(
-    label="⬇️ Download Filtered Data (Excel)",
-    data=output,
-    file_name="filtered_spare_parts.xlsx",
-    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    label="Download Excel",
+    data=output.getvalue(),
+    file_name="inventory.xlsx",
+    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
 )
-
 # --------------------------------------------------
 # Urgent & High
 # --------------------------------------------------
