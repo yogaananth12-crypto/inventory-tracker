@@ -3,11 +3,10 @@ import pandas as pd
 from io import BytesIO
 
 st.set_page_config(page_title="Inventory Tracker", layout="wide")
-
 st.title("📦 Inventory Tracker")
 
 # --------------------------------------------------
-# File upload
+# Upload file
 # --------------------------------------------------
 uploaded_file = st.file_uploader(
     "Upload inventory file (Excel or CSV)",
@@ -15,42 +14,58 @@ uploaded_file = st.file_uploader(
 )
 
 if uploaded_file is None:
-    st.info("Please upload an inventory file to begin.")
     st.stop()
 
 # --------------------------------------------------
 # Load file
 # --------------------------------------------------
-try:
-    if uploaded_file.name.endswith(".csv"):
-        df = pd.read_csv(uploaded_file)
-    else:
-        df = pd.read_excel(uploaded_file)
-except Exception as e:
-    st.error("Failed to read file")
-    st.exception(e)
-    st.stop()
+if uploaded_file.name.endswith(".csv"):
+    df = pd.read_csv(uploaded_file)
+else:
+    df = pd.read_excel(uploaded_file)
 
 # --------------------------------------------------
-# Normalize column names (CRITICAL FIX)
+# Normalize column names
 # --------------------------------------------------
 df.columns = (
     df.columns
-      .astype(str)
-      .str.strip()
-      .str.upper()
+    .astype(str)
+    .str.strip()
+    .str.upper()
 )
 
 # --------------------------------------------------
-# Validate required columns
+# AUTO-MAP COLUMN NAMES (CRITICAL FIX)
 # --------------------------------------------------
-REQUIRED_COLUMNS = {"PART NO", "QTY"}
+COLUMN_ALIASES = {
+    "PART NO": [
+        "PART NO", "PART NUMBER", "PARTNUMBER", "ITEM CODE",
+        "ITEM NO", "MATERIAL", "MATERIAL CODE"
+    ],
+    "QTY": [
+        "QTY", "QUANTITY", "QTY ISSUED", "BALANCE", "STOCK"
+    ],
+}
 
-missing = REQUIRED_COLUMNS - set(df.columns)
-if missing:
-    st.error(f"Missing required columns: {missing}")
+def find_column(possible_names, columns):
+    for name in possible_names:
+        if name in columns:
+            return name
+    return None
+
+part_col = find_column(COLUMN_ALIASES["PART NO"], df.columns)
+qty_col = find_column(COLUMN_ALIASES["QTY"], df.columns)
+
+if not part_col or not qty_col:
+    st.error("❌ Could not detect required columns automatically.")
     st.write("Detected columns:", df.columns.tolist())
     st.stop()
+
+# Rename to internal standard names
+df = df.rename(columns={
+    part_col: "PART NO",
+    qty_col: "QTY"
+})
 
 # --------------------------------------------------
 # Sidebar filters
@@ -58,14 +73,10 @@ if missing:
 st.sidebar.header("Filters")
 
 search = st.sidebar.text_input("Search PART NO")
-
-low_stock_only = st.sidebar.checkbox(
-    "Show low stock only (QTY ≤ 3)",
-    value=False
-)
+low_stock_only = st.sidebar.checkbox("Show low stock only (QTY ≤ 3)")
 
 # --------------------------------------------------
-# Filtering logic
+# Filtering
 # --------------------------------------------------
 filtered_df = df.copy()
 
@@ -77,33 +88,30 @@ if search:
     ]
 
 if low_stock_only:
+    filtered_df["QTY"] = pd.to_numeric(filtered_df["QTY"], errors="coerce")
     filtered_df = filtered_df[filtered_df["QTY"] <= 3]
 
 # --------------------------------------------------
-# Display table
+# Display
 # --------------------------------------------------
-st.subheader("Inventory")
-
-st.dataframe(
-    filtered_df,
-    use_container_width=True
-)
-
+st.subheader("Inventory Table")
+st.dataframe(filtered_df, use_container_width=True)
 st.caption(f"Rows shown: {len(filtered_df)} / {len(df)}")
 
 # --------------------------------------------------
-# Download Excel
+# Download
 # --------------------------------------------------
 output = BytesIO()
 filtered_df.to_excel(output, index=False)
 output.seek(0)
 
 st.download_button(
-    label="⬇️ Download filtered inventory (Excel)",
+    "⬇️ Download filtered inventory (Excel)",
     data=output,
     file_name="filtered_inventory.xlsx",
     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
 )
+
 
 
 
