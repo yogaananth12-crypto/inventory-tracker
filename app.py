@@ -143,12 +143,11 @@ styled_df = filtered_df.style.apply(highlight_priority, axis=1)
 
 st.dataframe(styled_df, use_container_width=True)
 
-# --------------------------------------------------
-# Download Button
-# --------------------------------------------------
+output = BytesIO()
+filtered_df.to_excel(output, index=False, engine="openpyxl")
 st.download_button(
     label="⬇️ Download Filtered Data (Excel)",
-    data=filtered_df.to_excel(index=False, engine="openpyxl"),
+    data=output,
     file_name="filtered_spare_parts.xlsx",
     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 )
