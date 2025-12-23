@@ -16,11 +16,12 @@ if search:
         filtered_df["Description"].astype(str).str.contains(search, case=False)
     ]
 if low_stock:
-    filtered_df = filtered_df[filtered_df["Quantity"] <= 2]
+    filtered_df = filtered_df[filtered_df["QTY"] <= 2]
 if critical:
     filtered_df = filtered_df[filtered_df["Critical Part"] == "YES"]
     st.write("Excel columns:")
     st.write(df.columns.tolist())
+col1, col2, col3 = st.columns(3)
 col1.metric("Total Parts", len(df))
 col2.metric("Low Stock Items", (df["QTY"] <= 2).sum())
 col3.metric("Critical Parts", (df["Critical Part"] == "YES").sum())
