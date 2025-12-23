@@ -11,7 +11,7 @@ def load_data():
     if "QTY" in df.columns:
         df.loc[df["QTY"] <= 1, "PRIORITY LEVEL"] = "URGENT"
         df.loc[df["QTY"] <= 3, "PRIORITY LEVEL"] = "HIGH"
-        if "CRITICAL PART" in df.columns:
+    if "CRITICAL PART" in df.columns:
         df.loc[df["CRITICAL PART"] == "YES", "PRIORITY LEVEL"] = "HIGH"
         return df
 df = load_data()
