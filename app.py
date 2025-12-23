@@ -6,7 +6,7 @@ st.set_page_config(page_title="Inventory Tracker", layout="wide")
 st.title("📦 Inventory Tracker")
 
 # --------------------------------------------------
-# Upload file
+# Upload
 # --------------------------------------------------
 uploaded_file = st.file_uploader(
     "Upload inventory file (Excel or CSV)",
@@ -25,50 +25,44 @@ else:
     df = pd.read_excel(uploaded_file)
 
 # --------------------------------------------------
-# Normalize column names
+# Normalize column names (display-safe)
 # --------------------------------------------------
 df.columns = (
     df.columns
     .astype(str)
     .str.strip()
-    .str.upper()
 )
 
+st.subheader("🔎 Detected Columns")
+st.write(df.columns.tolist())
+
 # --------------------------------------------------
-# AUTO-MAP COLUMN NAMES (CRITICAL FIX)
+# Column selection (USER CONTROL)
 # --------------------------------------------------
-COLUMN_ALIASES = {
-    "PART NO": [
-        "PART NO", "PART NUMBER", "PARTNUMBER", "ITEM CODE",
-        "ITEM NO", "MATERIAL", "MATERIAL CODE"
-    ],
-    "QTY": [
-        "QTY", "QUANTITY", "QTY ISSUED", "BALANCE", "STOCK"
-    ],
-}
+st.subheader("🧩 Map Required Columns")
 
-def find_column(possible_names, columns):
-    for name in possible_names:
-        if name in columns:
-            return name
-    return None
+part_col = st.selectbox(
+    "Select PART NUMBER column",
+    options=df.columns,
+)
 
-part_col = find_column(COLUMN_ALIASES["PART NO"], df.columns)
-qty_col = find_column(COLUMN_ALIASES["QTY"], df.columns)
+qty_col = st.selectbox(
+    "Select QUANTITY column",
+    options=df.columns,
+)
 
-if not part_col or not qty_col:
-    st.error("❌ Could not detect required columns automatically.")
-    st.write("Detected columns:", df.columns.tolist())
+if part_col == qty_col:
+    st.error("PART NO and QTY must be different columns.")
     st.stop()
 
-# Rename to internal standard names
+# Rename to internal standard
 df = df.rename(columns={
     part_col: "PART NO",
     qty_col: "QTY"
 })
 
 # --------------------------------------------------
-# Sidebar filters
+# Filters
 # --------------------------------------------------
 st.sidebar.header("Filters")
 
@@ -94,7 +88,7 @@ if low_stock_only:
 # --------------------------------------------------
 # Display
 # --------------------------------------------------
-st.subheader("Inventory Table")
+st.subheader("📋 Inventory Table")
 st.dataframe(filtered_df, use_container_width=True)
 st.caption(f"Rows shown: {len(filtered_df)} / {len(df)}")
 
@@ -111,6 +105,7 @@ st.download_button(
     file_name="filtered_inventory.xlsx",
     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
 )
+
 
 
 
