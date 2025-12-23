@@ -1,5 +1,7 @@
 import streamlit as st
 import pandas as pd
+df=df.loc[:, ~df.columns.str.contains('^unnamed')]
+df.columns = df.columns.str.strip()
 st.set_page_config(page_title="Spare Parts Dashboard", layout="wide")
 def load_data():
     return pd.read_excel("PCB BOARDS (CUP BOARD).xlsx")
@@ -30,6 +32,5 @@ st.dataframe(filtered_df, use_container_width=True)
 st.subheader("🚨 High Priority Parts")
 high_priority = df[df["Priority Level"] == "HIGH"]
 st.dataframe(high_priority, use_container_width=True)
-df=df.loc[:, ~df.columns.str.contains('^unnamed')]
-df.columns = df.columns.str.strip()
+
 
