@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 st.set_page_config(page_title="Spare Parts Dashboard", layout="wide")
 def load_data():
-    return pd.read_excel("spare_parts.xlsx")
+    return pd.read_excel("PCB BOARDS (CUP BOARD).xlsx")
 df = load_data()
 st.title("🔧 Spare Parts Inventory Dashboard (POC)")
 st.sidebar.header("Filters")
