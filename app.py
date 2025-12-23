@@ -1,9 +1,7 @@
 import streamlit as st
 import pandas as pd
-st.set_page_config(
-    page_title="Spare Parts Dashboard",
-    layout="wide"
-)
+st.set_page_config(page_title="Spare Parts Dashboard", layout="wide")
+@st.cache_data
 def load_data():
     df = pd.read_excel("PCB BOARDS (CUP BOARD).xlsx")
     df.columns = df.columns.str.strip().str.upper()
@@ -13,8 +11,11 @@ def load_data():
         df.loc[df["QTY"] <= 3, "PRIORITY LEVEL"] = "HIGH"
     if "CRITICAL PART" in df.columns:
         df.loc[df["CRITICAL PART"] == "YES", "PRIORITY LEVEL"] = "HIGH"
-        return df
+        return df   # <-- THIS LINE IS CRITICAL
 df = load_data()
+if df is None or df.empty:
+    st.error("Excel file could not be loaded or is empty.")
+    st.stop()
 st.title("🔧 Spare Parts Inventory Dashboard (POC)")
 st.sidebar.header("Filters")
 search = st.sidebar.text_input("Search Part No / Description")
@@ -31,9 +32,9 @@ if search:
         filtered_df["PART NO"].astype(str).str.contains(search, case=False, na=False) |
         filtered_df["DESCRIPTION"].astype(str).str.contains(search, case=False, na=False)
     ]
-if low_stock:
+if low_stock and "QTY" in filtered_df.columns:
     filtered_df = filtered_df[filtered_df["QTY"] <= 3]
-if critical:
+if critical and "CRITICAL PART" in filtered_df.columns:
     filtered_df = filtered_df[filtered_df["CRITICAL PART"] == "YES"]
 filtered_df = filtered_df[filtered_df["PRIORITY LEVEL"].isin(priority_filter)]
 col1, col2, col3, col4 = st.columns(4)
@@ -44,10 +45,11 @@ col4.metric("Normal", (df["PRIORITY LEVEL"] == "NORMAL").sum())
 st.subheader("📋 Spare Parts List")
 st.dataframe(filtered_df, use_container_width=True)
 st.subheader("🚨 Urgent & High Priority Parts")
-priority_table = df[df["PRIORITY LEVEL"].isin(["URGENT", "HIGH"])]
-st.dataframe(priority_table, use_container_width=True)
+priority_df = df[df["PRIORITY LEVEL"].isin(["URGENT", "HIGH"])]
+st.dataframe(priority_df, use_container_width=True)
 with st.expander("🔍 Debug: Excel Columns"):
     st.write(df.columns.tolist())
+
 
 
 
