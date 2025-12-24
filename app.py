@@ -21,13 +21,14 @@ def detect_header_row(file):
 # =========================
 def load_data(file):
     header_row = detect_header_row(file)
-    df = pd.read_excel(file, header=header_row)
 
+    df = pd.read_excel(file, header=header_row)
     df.columns = df.columns.astype(str).str.strip().str.upper()
 
     # Remove UNNAMED columns
     df = df.loc[:, ~df.columns.str.contains("^UNNAMED")]
 
+    # ---------- AUTO COLUMN DETECTION ----------
     def detect_column(columns, keywords):
         for col in columns:
             for key in keywords:
@@ -37,54 +38,56 @@ def load_data(file):
 
     cols = df.columns.tolist()
 
-    rename_map = {}
-    mapping = {
-        "S.NO": ["S.NO", "SNO", "SERIAL"],
-        "PART NO": ["PART", "ITEM"],
-        "DESCRIPTION": ["DESC", "DESCRIPTION"],
-        "BOX NO": ["BOX", "BIN", "LOCATION"],
-        "QTY": ["QTY", "QUANTITY", "STOCK"]
-    }
+    col_sno  = detect_column(cols, ["S.NO", "SNO", "SERIAL"])
+    col_part = detect_column(cols, ["PART", "ITEM"])
+    col_desc = detect_column(cols, ["DESC", "DESCRIPTION"])
+    col_box  = detect_column(cols, ["BOX", "BIN", "LOCATION"])
+    col_qty  = detect_column(cols, ["QTY", "QUANTITY", "STOCK"])
 
-    for std, keys in mapping.items():
-        col = detect_column(cols, keys)
-        if col:
-            rename_map[col] = std
+    rename_map = {}
+    if col_sno:  rename_map[col_sno]  = "S.NO"
+    if col_part: rename_map[col_part] = "PART NO"
+    if col_desc: rename_map[col_desc] = "DESCRIPTION"
+    if col_box:  rename_map[col_box]  = "BOX NO"
+    if col_qty:  rename_map[col_qty]  = "QTY"
 
     df = df.rename(columns=rename_map)
 
-    keep_cols = ["S.NO", "PART NO", "DESCRIPTION", "BOX NO", "QTY"]
-    df = df[[c for c in keep_cols if c in df.columns]]
+    # Keep only required columns
+    final_cols = ["S.NO", "PART NO", "DESCRIPTION", "BOX NO", "QTY"]
+    df = df[[c for c in final_cols if c in df.columns]]
 
-    df["QTY"] = pd.to_numeric(df["QTY"], errors="coerce").fillna(0)
+    # Qty numeric
+    if "QTY" in df.columns:
+        df["QTY"] = pd.to_numeric(df["QTY"], errors="coerce").fillna(0)
 
-    return df
-
-# =========================
-# PRIORITY LOGIC
-# =========================
-def apply_priority(df):
+    # Priority
     df["PRIORITY LEVEL"] = "NORMAL"
     df.loc[df["QTY"] <= 3, "PRIORITY LEVEL"] = "HIGH"
     df.loc[df["QTY"] <= 1, "PRIORITY LEVEL"] = "URGENT"
+
     return df
 
 # =========================
 # FILE UPLOAD
 # =========================
-uploaded_file = st.file_uploader("📤 Upload Spare Parts Excel File", type=["xlsx"])
+uploaded_file = st.file_uploader(
+    "📤 Upload Spare Parts Excel File",
+    type=["xlsx"]
+)
 
 if not uploaded_file:
-    st.info("Please upload an Excel file.")
+    st.info("Please upload an Excel file to continue.")
     st.stop()
 
-if "data" not in st.session_state:
-    st.session_state.data = apply_priority(load_data(uploaded_file))
+df = load_data(uploaded_file)
 
-df = st.session_state.data
+if df.empty:
+    st.warning("No valid data detected.")
+    st.stop()
 
 # =========================
-# METRICS
+# KPI METRICS
 # =========================
 c1, c2, c3, c4 = st.columns(4)
 c1.metric("Total Parts", len(df))
@@ -96,7 +99,8 @@ c4.metric("Normal", (df["PRIORITY LEVEL"] == "NORMAL").sum())
 # SEARCH
 # =========================
 st.subheader("📋 Spare Parts List")
-search = st.text_input("🔍 Search Part No / Description")
+
+search = st.text_input("🔍 Search Part No or Description")
 
 filtered_df = df.copy()
 if search:
@@ -106,38 +110,34 @@ if search:
     ]
 
 # =========================
-# EDITABLE TABLE
+# COLOR PRIORITY
 # =========================
-edited_df = st.data_editor(
-    filtered_df,
-    use_container_width=True,
-    num_rows="fixed",
-    disabled=["S.NO", "PART NO", "DESCRIPTION", "BOX NO", "PRIORITY LEVEL"],
-    key="editor"
-)
+def color_priority(row):
+    if row["PRIORITY LEVEL"] == "URGENT":
+        return ["background-color:#ffcccc"] * len(row)
+    if row["PRIORITY LEVEL"] == "HIGH":
+        return ["background-color:#fff2cc"] * len(row)
+    return [""] * len(row)
 
-# =========================
-# UPDATE SESSION DATA
-# =========================
-if not edited_df.equals(filtered_df):
-    st.session_state.data.update(edited_df)
-    st.session_state.data = apply_priority(st.session_state.data)
+st.dataframe(
+    filtered_df.style.apply(color_priority, axis=1),
+    use_container_width=True
+)
 
 # =========================
 # DOWNLOAD
 # =========================
 output = BytesIO()
-st.session_state.data.to_excel(output, index=False, engine="openpyxl")
+filtered_df.to_excel(output, index=False, engine="openpyxl")
 output.seek(0)
 
 st.download_button(
-    "⬇️ Download Updated Inventory",
+    "⬇️ Download Filtered Data (Excel)",
     data=output,
-    file_name="updated_spare_parts.xlsx",
+    file_name="filtered_spare_parts.xlsx",
     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 )
-st.write(list(df.columns))
-
+st.write("Detected Columns:", list(df.columns))
 
 
 
