@@ -3,54 +3,48 @@ import pandas as pd
 import requests
 
 st.set_page_config(page_title="Spare Parts Inventory", layout="wide")
-st.title("🔧 Spare Parts Inventory (Shared Live)")
+st.title("🔧 Spare Parts Inventory")
 
-# ================= CONFIG =================
-SHEET_ID = "PASTE_YOUR_SHEET_ID_HERE"
-SHEET_NAME = "Sheet1"
-APPS_SCRIPT_URL = "PASTE_WEB_APP_URL_HERE"
+# 🔴 CHANGE THESE TWO LINES ONLY
+SHEET_ID = "1PY9T5x0sqaDnHTZ5RoDx3LYGBu8bqOT7j4itdlC9yuE"
+SAVE_URL = "https://script.google.com/macros/s/AKfycbzr0HSp2GQKW8MNZi2WfZA5SP3XJOjgbHa_P0g3803_yVVgAFcak_6nV1_Tk31TJmad/exec"
 
-CSV_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={SHEET_NAME}"
+CSV_URL = f"https://docs.google.com/spreadsheets/d/{1PY9T5x0sqaDnHTZ5RoDx3LYGBu8bqOT7j4itdlC9yuE}/export?format=csv"
 
-# ================= LOAD DATA =================
 @st.cache_data(ttl=5)
 def load_data():
     df = pd.read_csv(CSV_URL)
-    df.columns = df.columns.str.strip().str.upper()
+    df.columns = df.columns.str.upper()
     df["QTY"] = pd.to_numeric(df["QTY"], errors="coerce").fillna(0)
     return df
 
 df = load_data()
 
-# ================= SEARCH =================
 search = st.text_input("🔍 Search Part No / Description")
 
-filtered_df = df.copy()
 if search:
-    filtered_df = filtered_df[
-        filtered_df["PART NO"].astype(str).str.contains(search, case=False, na=False) |
-        filtered_df["DESCRIPTION"].astype(str).str.contains(search, case=False, na=False)
+    df = df[
+        df["PART NO"].astype(str).str.contains(search, case=False, na=False)
+        | df["DESCRIPTION"].astype(str).str.contains(search, case=False, na=False)
     ]
 
-# ================= EDIT =================
 edited_df = st.data_editor(
-    filtered_df,
-    use_container_width=True,
+    df,
     disabled=["S.NO", "PART NO", "DESCRIPTION", "BOX NO"],
-    num_rows="fixed"
+    use_container_width=True
 )
 
-# ================= SAVE =================
-if st.button("💾 Save Changes"):
+if st.button("💾 Save QTY"):
     for _, row in edited_df.iterrows():
         payload = {
             "part_no": row["PART NO"],
             "qty": int(row["QTY"])
         }
-        requests.post(APPS_SCRIPT_URL, json=payload)
+        requests.post(SAVE_URL, json=payload)
 
-    st.success("✅ Changes saved for ALL users")
+    st.success("✅ Saved! Other users will see the update")
     st.cache_data.clear()
+
 
 
 
