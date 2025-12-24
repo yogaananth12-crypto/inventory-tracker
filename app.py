@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+from io import BytesIO
 
 # --------------------------------------------------
 # Page Config
@@ -26,7 +27,7 @@ def load_data():
     if "QTY" in df.columns:
         df["QTY"] = pd.to_numeric(df["QTY"], errors="coerce").fillna(0)
 
-    # Normalize CRITICAL PART values
+    # Normalize CRITICAL PART
     if "CRITICAL PART" in df.columns:
         df["CRITICAL PART"] = (
             df["CRITICAL PART"]
@@ -85,14 +86,13 @@ priority_filter = st.sidebar.multiselect(
 # --------------------------------------------------
 filtered_df = df.copy()
 
-# 🔎 ROBUST SEARCH (FIXED)
+# Robust search across all text columns
 if search:
     search = search.lower()
-
-    text_columns = filtered_df.select_dtypes(include=["object"]).columns
+    text_cols = filtered_df.select_dtypes(include=["object"]).columns
 
     filtered_df = filtered_df[
-        filtered_df[text_columns]
+        filtered_df[text_cols]
         .astype(str)
         .apply(
             lambda row: row.str.lower().str.contains(search, na=False).any(),
@@ -136,7 +136,7 @@ priority_chart = (
 st.bar_chart(priority_chart)
 
 # --------------------------------------------------
-# Row Coloring
+# Row Highlighting
 # --------------------------------------------------
 def highlight_priority(row):
     if row["PRIORITY LEVEL"] == "URGENT":
@@ -156,11 +156,15 @@ st.dataframe(
 )
 
 # --------------------------------------------------
-# Download Button
+# Download Button (FIXED)
 # --------------------------------------------------
+output = BytesIO()
+filtered_df.to_excel(output, index=False, engine="openpyxl")
+output.seek(0)
+
 st.download_button(
     label="⬇️ Download Filtered Data (Excel)",
-    data=filtered_df.to_excel(index=False, engine="openpyxl"),
+    data=output,
     file_name="filtered_spare_parts.xlsx",
     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 )
@@ -178,6 +182,7 @@ st.dataframe(
 )
 st.write("Detected columns:")
 st.write(df.columns.tolist())
+
 
 
 
