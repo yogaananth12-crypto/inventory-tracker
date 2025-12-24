@@ -48,7 +48,7 @@ response = requests.post(SAVE_URL, json=updates)
 if response.status_code == 200:
         st.success("✅ Saved successfully! Refreshing data...")
         st.rerun()
-    else:
+    else
         st.error("❌ Save failed. Check Apps Script.")
 
 # ================= FOOTER =================
