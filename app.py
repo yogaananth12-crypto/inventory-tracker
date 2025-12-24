@@ -10,16 +10,19 @@ SHEET_ID = "1PY9T5x0sqaDnHTZ5RoDx3LYGBu8bqOT7j4itdlC9yuE"
 SAVE_URL = "https://script.google.com/macros/s/AKfycbzr0HSp2GQKW8MNZi2WfZA5SP3XJOjgbHa_P0g3803_yVVgAFcak_6nV1_Tk31TJmad/exec"
 
 CSV_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv"
-
-@st.cache_data(ttl=2)
 def load_data():
     df = pd.read_csv(CSV_URL)
-    df.columns = df.columns.str.upper()
-    df["QTY"] = pd.to_numeric(df["QTY"], errors="coerce").fillna(0)
+    df.columns = df.columns.str.strip().str.upper()
+
+    # Remove empty rows
+    df = df.dropna(how="all")
+
+    # Ensure QTY numeric
+    if "QTY" in df.columns:
+        df["QTY"] = pd.to_numeric(df["QTY"], errors="coerce").fillna(0)
+
     return df
-
-df = load_data()
-
+    df = load_data()
 search = st.text_input("🔍 Search Part No / Description")
 
 if search:
@@ -43,11 +46,14 @@ if st.button("💾 Save QTY"):
         })
 
     with st.spinner("Saving changes..."):
-        requests.post(SAVE_URL, json=updates)
+        r = requests.post(SAVE_URL, json=updates)
 
-    st.success("✅ Saved! Other users will see updates after refresh")
-    st.cache_data.clear()
-    st.rerun()
+    if r.status_code == 200:
+        st.success("✅ Saved! Refreshing data...")
+        st.rerun()
+    else:
+        st.error("❌ Save failed")
+
 
 
 
