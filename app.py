@@ -11,21 +11,34 @@ st.title("🔧 Spare Parts Inventory Dashboard (POC)")
 EXCEL_FILE = "PCB BOARDS (CUP BOARD).xlsx"
 
 # =========================
+# AUTO DETECT HEADER ROW
+# =========================
+def detect_header_row(file):
+    preview = pd.read_excel(file, header=None, nrows=6)
+    for i in range(len(preview)):
+        row = preview.iloc[i].astype(str).str.upper()
+        if any("PART" in cell or "QTY" in cell for cell in row):
+            return i
+    return 0
+
+# =========================
 # LOAD DATA
 # =========================
 def load_data():
     try:
-        df = pd.read_excel(EXCEL_FILE, skiprows=1)
-    except FileNotFoundError:
-        st.error(f"❌ Excel file not found: {EXCEL_FILE}")
-        return None
+        header_row = detect_header_row(EXCEL_FILE)
+        df = pd.read_excel(EXCEL_FILE, header=header_row)
     except Exception as e:
         st.error(f"❌ Error loading Excel file: {e}")
         return None
 
+    # Normalize columns
     df.columns = df.columns.astype(str).str.strip().str.upper()
+
+    # Remove UNNAMED columns
     df = df.loc[:, ~df.columns.str.contains("^UNNAMED")]
 
+    # ---------- AUTO COLUMN DETECTION ----------
     def detect_column(columns, keywords):
         for col in columns:
             for key in keywords:
@@ -35,44 +48,48 @@ def load_data():
 
     cols = df.columns.tolist()
 
-    col_sno  = detect_column(cols, ["S.NO", "SNO", "SERIAL"])
-    col_part = detect_column(cols, ["PART", "ITEM"])
-    col_desc = detect_column(cols, ["DESC", "DESCRIPTION"])
-    col_box  = detect_column(cols, ["BOX", "BIN", "LOCATION"])
-    col_qty  = detect_column(cols, ["QTY", "QUANTITY", "STOCK"])
+    rename_map = {
+        detect_column(cols, ["S.NO", "SNO", "SERIAL"]): "S.NO",
+        detect_column(cols, ["PART", "ITEM"]): "PART NO",
+        detect_column(cols, ["DESC", "DESCRIPTION"]): "DESCRIPTION",
+        detect_column(cols, ["BOX", "BIN", "LOCATION"]): "BOX NO",
+        detect_column(cols, ["QTY", "QUANTITY", "STOCK"]): "QTY",
+    }
 
-    rename_map = {}
-    if col_sno:  rename_map[col_sno]  = "S.NO"
-    if col_part: rename_map[col_part] = "PART NO"
-    if col_desc: rename_map[col_desc] = "DESCRIPTION"
-    if col_box:  rename_map[col_box]  = "BOX NO"
-    if col_qty:  rename_map[col_qty]  = "QTY"
-
+    rename_map = {k: v for k, v in rename_map.items() if k}
     df = df.rename(columns=rename_map)
 
-    for c in ["S.NO", "PART NO", "DESCRIPTION", "BOX NO", "QTY"]:
+    # Keep only required columns
+    required = ["S.NO", "PART NO", "DESCRIPTION", "BOX NO", "QTY"]
+    for c in required:
         if c not in df.columns:
             df[c] = "" if c != "QTY" else 0
 
-    df = df[["S.NO", "PART NO", "DESCRIPTION", "BOX NO", "QTY"]]
+    df = df[required]
+
+    # Drop EMPTY rows (THIS FIXES YOUR SCREENSHOT ISSUE)
+    df = df[
+        df["PART NO"].astype(str).str.strip().ne("")
+        | df["DESCRIPTION"].astype(str).str.strip().ne("")
+    ]
+
+    # Ensure QTY numeric
     df["QTY"] = pd.to_numeric(df["QTY"], errors="coerce").fillna(0).astype(int)
 
+    # PRIORITY LOGIC
     df["PRIORITY LEVEL"] = "NORMAL"
     df.loc[df["QTY"] <= 3, "PRIORITY LEVEL"] = "HIGH"
     df.loc[df["QTY"] <= 1, "PRIORITY LEVEL"] = "URGENT"
 
-    return df
+    return df.reset_index(drop=True)
 
 # =========================
-# LOAD INTO SESSION
+# LOAD DATA
 # =========================
-if "data" not in st.session_state:
-    st.session_state.data = load_data()
-
-df = st.session_state.data
+df = load_data()
 
 if df is None or df.empty:
-    st.warning("⚠ No data available.")
+    st.warning("⚠ No valid spare parts found.")
     st.stop()
 
 # =========================
@@ -97,53 +114,24 @@ if search:
         | filtered_df["DESCRIPTION"].astype(str).str.contains(search, case=False, na=False)
     ]
 
-# =========================
-# EDITABLE TABLE (ONLY QTY)
-# =========================
-edited_df = st.data_editor(
-    filtered_df,
-    use_container_width=True,
-    disabled=["S.NO", "PART NO", "DESCRIPTION", "BOX NO", "PRIORITY LEVEL"],
-    key="editor"
-)
+st.dataframe(filtered_df, use_container_width=True)
 
 # =========================
-# SAVE BUTTON
-# =========================
-if st.button("💾 Save Changes to Excel"):
-    try:
-        # Update main dataframe
-        df.update(edited_df)
-
-        # Recalculate priority
-        df["PRIORITY LEVEL"] = "NORMAL"
-        df.loc[df["QTY"] <= 3, "PRIORITY LEVEL"] = "HIGH"
-        df.loc[df["QTY"] <= 1, "PRIORITY LEVEL"] = "URGENT"
-
-        # Save back to Excel
-        df.drop(columns=["PRIORITY LEVEL"]).to_excel(EXCEL_FILE, index=False)
-
-        st.session_state.data = df
-        st.success("✅ Quantity updated and saved successfully!")
-
-    except Exception as e:
-        st.error(f"❌ Error saving file: {e}")
-
-# =========================
-# DOWNLOAD BACKUP
+# DOWNLOAD
 # =========================
 output = BytesIO()
-df.to_excel(output, index=False)
+filtered_df.to_excel(output, index=False)
 output.seek(0)
 
 st.download_button(
-    "⬇️ Download Backup Excel",
+    "⬇️ Download Filtered Data (Excel)",
     output,
-    "spare_parts_backup.xlsx",
+    "filtered_spare_parts.xlsx",
     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 )
-st.write(df.head())
+st.write("Rows shown:", len(filtered_df))
 st.write("Columns:", list(df.columns))
+
 
 
 
