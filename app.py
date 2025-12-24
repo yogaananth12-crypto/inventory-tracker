@@ -16,13 +16,16 @@ def detect_column(columns, keywords):
             if key in col:
                 return col
     return None
-
 # --------------------------------------------------
 # Load Data
 # --------------------------------------------------
 def load_data():
     try:
-        df = pd.read_excel("PCB BOARDS (CUP BOARD).xlsx")
+        # ⬇️ Skip the title row
+        df = pd.read_excel(
+            "PCB BOARDS (CUP BOARD).xlsx",
+            skiprows=1
+        )
     except Exception as e:
         st.error(f"Error loading Excel file: {e}")
         return None
@@ -33,16 +36,22 @@ def load_data():
     # Remove UNNAMED columns
     df = df.loc[:, ~df.columns.str.contains("^UNNAMED")]
 
+    # ---------- AUTO-DETECT ----------
+    def detect_column(columns, keywords):
+        for col in columns:
+            for key in keywords:
+                if key in col:
+                    return col
+        return None
+
     cols = df.columns.tolist()
 
-    # Auto-detect columns
-    col_sno  = detect_column(cols, ["S.NO", "SNO", "SR NO", "SERIAL"])
-    col_part = detect_column(cols, ["PART NO", "PART NUMBER", "PARTNO", "ITEM CODE", "MATERIAL"])
-    col_desc = detect_column(cols, ["DESCRIPTION", "DESC", "ITEM DESCRIPTION"])
+    col_sno  = detect_column(cols, ["S.NO", "SNO", "SR", "SERIAL"])
+    col_part = detect_column(cols, ["PART", "ITEM", "MATERIAL"])
+    col_desc = detect_column(cols, ["DESC", "DESCRIPTION"])
     col_box  = detect_column(cols, ["BOX", "BIN", "LOCATION"])
     col_qty  = detect_column(cols, ["QTY", "QUANTITY", "STOCK"])
 
-    # Rename detected columns to standard names
     rename_map = {}
     if col_sno:  rename_map[col_sno]  = "S.NO"
     if col_part: rename_map[col_part] = "PART NO"
@@ -56,7 +65,7 @@ def load_data():
     if "QTY" in df.columns:
         df["QTY"] = pd.to_numeric(df["QTY"], errors="coerce").fillna(0)
 
-    # Priority Logic
+    # Priority
     df["PRIORITY LEVEL"] = "NORMAL"
     if "QTY" in df.columns:
         df.loc[df["QTY"] <= 1, "PRIORITY LEVEL"] = "URGENT"
@@ -64,11 +73,6 @@ def load_data():
 
     return df
 
-
-# --------------------------------------------------
-# Load Data
-# --------------------------------------------------
-df = load_data()
 
 if df is None or df.empty:
     st.error("Excel file could not be loaded or is empty.")
