@@ -2,31 +2,30 @@ import streamlit as st
 import pandas as pd
 from io import BytesIO
 
+# =========================
+# CONFIG
+# =========================
 st.set_page_config(page_title="Spare Parts Inventory", layout="wide")
-
 st.title("🔧 Spare Parts Inventory Dashboard (POC)")
 
+EXCEL_FILE = "PCB BOARDS (CUP BOARD).xlsx"
+
 # =========================
-# LOAD DATA FUNCTION
+# LOAD DATA
 # =========================
 def load_data():
     try:
-        # Skip title row
-        df = pd.read_excel(
-            "PCB BOARDS (CUP BOARD).xlsx",
-            skiprows=1
-        )
+        df = pd.read_excel(EXCEL_FILE, skiprows=1)
+    except FileNotFoundError:
+        st.error(f"❌ Excel file not found: {EXCEL_FILE}")
+        return None
     except Exception as e:
         st.error(f"❌ Error loading Excel file: {e}")
         return None
 
-    # Clean column names
     df.columns = df.columns.astype(str).str.strip().str.upper()
-
-    # Remove UNNAMED columns
     df = df.loc[:, ~df.columns.str.contains("^UNNAMED")]
 
-    # ---------- AUTO COLUMN DETECTION ----------
     def detect_column(columns, keywords):
         for col in columns:
             for key in keywords:
@@ -51,47 +50,44 @@ def load_data():
 
     df = df.rename(columns=rename_map)
 
-    # Keep only required columns
-    final_cols = ["S.NO", "PART NO", "DESCRIPTION", "BOX NO", "QTY"]
-    df = df[[c for c in final_cols if c in df.columns]]
+    for c in ["S.NO", "PART NO", "DESCRIPTION", "BOX NO", "QTY"]:
+        if c not in df.columns:
+            df[c] = "" if c != "QTY" else 0
 
-    # Ensure QTY numeric
-    if "QTY" in df.columns:
-        df["QTY"] = pd.to_numeric(df["QTY"], errors="coerce").fillna(0)
+    df = df[["S.NO", "PART NO", "DESCRIPTION", "BOX NO", "QTY"]]
+    df["QTY"] = pd.to_numeric(df["QTY"], errors="coerce").fillna(0).astype(int)
 
-    # Priority logic
     df["PRIORITY LEVEL"] = "NORMAL"
-    if "QTY" in df.columns:
-        df.loc[df["QTY"] <= 3, "PRIORITY LEVEL"] = "HIGH"
-        df.loc[df["QTY"] <= 1, "PRIORITY LEVEL"] = "URGENT"
+    df.loc[df["QTY"] <= 3, "PRIORITY LEVEL"] = "HIGH"
+    df.loc[df["QTY"] <= 1, "PRIORITY LEVEL"] = "URGENT"
 
     return df
 
+# =========================
+# LOAD INTO SESSION
+# =========================
+if "data" not in st.session_state:
+    st.session_state.data = load_data()
 
-# =========================
-# LOAD DATA SAFELY
-# =========================
-df = load_data()
+df = st.session_state.data
 
 if df is None or df.empty:
-    st.warning("⚠ No data available after processing.")
+    st.warning("⚠ No data available.")
     st.stop()
 
 # =========================
-# KPI METRICS
+# METRICS
 # =========================
-col1, col2, col3, col4 = st.columns(4)
-
-col1.metric("Total Parts", len(df))
-col2.metric("Urgent", (df["PRIORITY LEVEL"] == "URGENT").sum())
-col3.metric("High Priority", (df["PRIORITY LEVEL"] == "HIGH").sum())
-col4.metric("Normal", (df["PRIORITY LEVEL"] == "NORMAL").sum())
+c1, c2, c3, c4 = st.columns(4)
+c1.metric("Total Parts", len(df))
+c2.metric("Urgent", (df["PRIORITY LEVEL"] == "URGENT").sum())
+c3.metric("High", (df["PRIORITY LEVEL"] == "HIGH").sum())
+c4.metric("Normal", (df["PRIORITY LEVEL"] == "NORMAL").sum())
 
 # =========================
 # SEARCH
 # =========================
 st.subheader("📋 Spare Parts List")
-
 search = st.text_input("🔍 Search Part Number or Description")
 
 filtered_df = df.copy()
@@ -101,23 +97,53 @@ if search:
         | filtered_df["DESCRIPTION"].astype(str).str.contains(search, case=False, na=False)
     ]
 
-st.dataframe(filtered_df, use_container_width=True)
+# =========================
+# EDITABLE TABLE (ONLY QTY)
+# =========================
+edited_df = st.data_editor(
+    filtered_df,
+    use_container_width=True,
+    disabled=["S.NO", "PART NO", "DESCRIPTION", "BOX NO", "PRIORITY LEVEL"],
+    key="editor"
+)
 
 # =========================
-# DOWNLOAD
+# SAVE BUTTON
+# =========================
+if st.button("💾 Save Changes to Excel"):
+    try:
+        # Update main dataframe
+        df.update(edited_df)
+
+        # Recalculate priority
+        df["PRIORITY LEVEL"] = "NORMAL"
+        df.loc[df["QTY"] <= 3, "PRIORITY LEVEL"] = "HIGH"
+        df.loc[df["QTY"] <= 1, "PRIORITY LEVEL"] = "URGENT"
+
+        # Save back to Excel
+        df.drop(columns=["PRIORITY LEVEL"]).to_excel(EXCEL_FILE, index=False)
+
+        st.session_state.data = df
+        st.success("✅ Quantity updated and saved successfully!")
+
+    except Exception as e:
+        st.error(f"❌ Error saving file: {e}")
+
+# =========================
+# DOWNLOAD BACKUP
 # =========================
 output = BytesIO()
-filtered_df.to_excel(output, index=False, engine="openpyxl")
+df.to_excel(output, index=False)
 output.seek(0)
 
 st.download_button(
-    label="⬇️ Download Filtered Data (Excel)",
-    data=output,
-    file_name="filtered_spare_parts.xlsx",
+    "⬇️ Download Backup Excel",
+    output,
+    "spare_parts_backup.xlsx",
     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 )
-st.write("Final Columns Used:")
-st.write(list(df.columns))
+st.write(df.head())
+st.write("Columns:", list(df.columns))
 
 
 
