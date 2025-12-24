@@ -1,38 +1,29 @@
 import streamlit as st
 import pandas as pd
 from io import BytesIO
+import os
 
 # =========================
 # CONFIG
 # =========================
 st.set_page_config(page_title="Spare Parts Inventory", layout="wide")
-st.title("🔧 Spare Parts Inventory Dashboard (POC)")
-
 EXCEL_FILE = "PCB BOARDS (CUP BOARD).xlsx"
 
-# =========================
-# AUTO DETECT HEADER ROW
-# =========================
-def detect_header_row(file):
-    preview = pd.read_excel(file, header=None, nrows=6)
-    for i in range(len(preview)):
-        row = preview.iloc[i].astype(str).str.upper()
-        if any("PART" in cell or "QTY" in cell for cell in row):
-            return i
-    return 0
+st.title("🔧 Spare Parts Inventory Dashboard")
 
 # =========================
 # LOAD DATA
 # =========================
+@st.cache_data(show_spinner=False)
 def load_data():
-    try:
-        header_row = detect_header_row(EXCEL_FILE)
-        df = pd.read_excel(EXCEL_FILE, header=header_row)
-    except Exception as e:
-        st.error(f"❌ Error loading Excel file: {e}")
+    if not os.path.exists(EXCEL_FILE):
+        st.error(f"❌ Excel file not found: {EXCEL_FILE}")
         return None
 
-    # Normalize columns
+    # Read Excel (skip first title row if needed)
+    df = pd.read_excel(EXCEL_FILE, skiprows=1)
+
+    # Clean column names
     df.columns = df.columns.astype(str).str.strip().str.upper()
 
     # Remove UNNAMED columns
@@ -48,35 +39,32 @@ def load_data():
 
     cols = df.columns.tolist()
 
-    rename_map = {
-        detect_column(cols, ["S.NO", "SNO", "SERIAL"]): "S.NO",
-        detect_column(cols, ["PART", "ITEM"]): "PART NO",
-        detect_column(cols, ["DESC", "DESCRIPTION"]): "DESCRIPTION",
-        detect_column(cols, ["BOX", "BIN", "LOCATION"]): "BOX NO",
-        detect_column(cols, ["QTY", "QUANTITY", "STOCK"]): "QTY",
-    }
+    col_sno  = detect_column(cols, ["S.NO", "SNO", "SERIAL"])
+    col_part = detect_column(cols, ["PART"])
+    col_desc = detect_column(cols, ["DESC", "DESCRIPTION"])
+    col_box  = detect_column(cols, ["BOX", "BIN", "LOCATION"])
+    col_qty  = detect_column(cols, ["QTY", "QUANTITY", "STOCK"])
 
-    rename_map = {k: v for k, v in rename_map.items() if k}
+    rename_map = {}
+    if col_sno:  rename_map[col_sno]  = "S.NO"
+    if col_part: rename_map[col_part] = "PART NO"
+    if col_desc: rename_map[col_desc] = "DESCRIPTION"
+    if col_box:  rename_map[col_box]  = "BOX NO"
+    if col_qty:  rename_map[col_qty]  = "QTY"
+
     df = df.rename(columns=rename_map)
 
     # Keep only required columns
     required = ["S.NO", "PART NO", "DESCRIPTION", "BOX NO", "QTY"]
-    for c in required:
-        if c not in df.columns:
-            df[c] = "" if c != "QTY" else 0
+    df = df[[c for c in required if c in df.columns]]
 
-    df = df[required]
-
-    # Drop EMPTY rows (THIS FIXES YOUR SCREENSHOT ISSUE)
-    df = df[
-        df["PART NO"].astype(str).str.strip().ne("")
-        | df["DESCRIPTION"].astype(str).str.strip().ne("")
-    ]
+    # Drop empty rows (IMPORTANT)
+    df = df.dropna(subset=["PART NO", "DESCRIPTION"], how="all")
 
     # Ensure QTY numeric
-    df["QTY"] = pd.to_numeric(df["QTY"], errors="coerce").fillna(0).astype(int)
+    df["QTY"] = pd.to_numeric(df.get("QTY", 0), errors="coerce").fillna(0).astype(int)
 
-    # PRIORITY LOGIC
+    # Priority
     df["PRIORITY LEVEL"] = "NORMAL"
     df.loc[df["QTY"] <= 3, "PRIORITY LEVEL"] = "HIGH"
     df.loc[df["QTY"] <= 1, "PRIORITY LEVEL"] = "URGENT"
@@ -84,7 +72,14 @@ def load_data():
     return df.reset_index(drop=True)
 
 # =========================
-# LOAD DATA
+# SAVE DATA
+# =========================
+def save_data(df):
+    save_df = df.drop(columns=["PRIORITY LEVEL"])
+    save_df.to_excel(EXCEL_FILE, index=False)
+
+# =========================
+# MAIN
 # =========================
 df = load_data()
 
@@ -93,7 +88,7 @@ if df is None or df.empty:
     st.stop()
 
 # =========================
-# METRICS
+# KPI
 # =========================
 c1, c2, c3, c4 = st.columns(4)
 c1.metric("Total Parts", len(df))
@@ -105,6 +100,7 @@ c4.metric("Normal", (df["PRIORITY LEVEL"] == "NORMAL").sum())
 # SEARCH
 # =========================
 st.subheader("📋 Spare Parts List")
+
 search = st.text_input("🔍 Search Part Number or Description")
 
 filtered_df = df.copy()
@@ -114,23 +110,45 @@ if search:
         | filtered_df["DESCRIPTION"].astype(str).str.contains(search, case=False, na=False)
     ]
 
-st.dataframe(filtered_df, use_container_width=True)
+# =========================
+# EDITABLE TABLE (QTY ONLY)
+# =========================
+edited_df = st.data_editor(
+    filtered_df,
+    use_container_width=True,
+    disabled=["S.NO", "PART NO", "DESCRIPTION", "BOX NO", "PRIORITY LEVEL"],
+    key="editor"
+)
+
+# =========================
+# SAVE BUTTON
+# =========================
+if st.button("💾 Save Changes"):
+    df.update(edited_df)
+
+    # Recalculate priority
+    df["PRIORITY LEVEL"] = "NORMAL"
+    df.loc[df["QTY"] <= 3, "PRIORITY LEVEL"] = "HIGH"
+    df.loc[df["QTY"] <= 1, "PRIORITY LEVEL"] = "URGENT"
+
+    save_data(df)
+    st.success("✅ Inventory updated successfully!")
 
 # =========================
 # DOWNLOAD
 # =========================
 output = BytesIO()
-filtered_df.to_excel(output, index=False)
+df.to_excel(output, index=False, engine="openpyxl")
 output.seek(0)
 
 st.download_button(
-    "⬇️ Download Filtered Data (Excel)",
-    output,
-    "filtered_spare_parts.xlsx",
+    "⬇️ Download Current Inventory",
+    data=output,
+    file_name="spare_parts_inventory.xlsx",
     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 )
-st.write("Rows shown:", len(filtered_df))
-st.write("Columns:", list(df.columns))
+st.write("Columns Used:")
+st.write(list(df.columns))
 
 
 
