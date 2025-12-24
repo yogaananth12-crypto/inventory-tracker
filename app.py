@@ -180,7 +180,6 @@ st.dataframe(
     priority_df.style.apply(highlight_priority, axis=1),
     use_container_width=True
 )
-st.write("Detected columns:")
 st.write(df.columns.tolist())
 
 
