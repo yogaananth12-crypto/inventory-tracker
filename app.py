@@ -2,41 +2,31 @@ import streamlit as st
 import pandas as pd
 from io import BytesIO
 
-# --------------------------------------------------
-# Page Config
-# --------------------------------------------------
-st.set_page_config(page_title="Spare Parts Inventory Dashboard", layout="wide")
+st.set_page_config(page_title="Spare Parts Inventory", layout="wide")
 
-# --------------------------------------------------
-# Column Detection Helper
-# --------------------------------------------------
-def detect_column(columns, keywords):
-    for col in columns:
-        for key in keywords:
-            if key in col:
-                return col
-    return None
-# --------------------------------------------------
-# Load Data
-# --------------------------------------------------
+st.title("🔧 Spare Parts Inventory Dashboard (POC)")
+
+# =========================
+# LOAD DATA FUNCTION
+# =========================
 def load_data():
     try:
-        # ⬇️ Skip the title row
+        # Skip title row
         df = pd.read_excel(
             "PCB BOARDS (CUP BOARD).xlsx",
             skiprows=1
         )
     except Exception as e:
-        st.error(f"Error loading Excel file: {e}")
+        st.error(f"❌ Error loading Excel file: {e}")
         return None
 
-    # Normalize column names
-    df.columns = df.columns.str.strip().str.upper()
+    # Clean column names
+    df.columns = df.columns.astype(str).str.strip().str.upper()
 
     # Remove UNNAMED columns
     df = df.loc[:, ~df.columns.str.contains("^UNNAMED")]
 
-    # ---------- AUTO-DETECT ----------
+    # ---------- AUTO COLUMN DETECTION ----------
     def detect_column(columns, keywords):
         for col in columns:
             for key in keywords:
@@ -46,8 +36,8 @@ def load_data():
 
     cols = df.columns.tolist()
 
-    col_sno  = detect_column(cols, ["S.NO", "SNO", "SR", "SERIAL"])
-    col_part = detect_column(cols, ["PART", "ITEM", "MATERIAL"])
+    col_sno  = detect_column(cols, ["S.NO", "SNO", "SERIAL"])
+    col_part = detect_column(cols, ["PART", "ITEM"])
     col_desc = detect_column(cols, ["DESC", "DESCRIPTION"])
     col_box  = detect_column(cols, ["BOX", "BIN", "LOCATION"])
     col_qty  = detect_column(cols, ["QTY", "QUANTITY", "STOCK"])
@@ -61,121 +51,74 @@ def load_data():
 
     df = df.rename(columns=rename_map)
 
+    # Keep only required columns
+    final_cols = ["S.NO", "PART NO", "DESCRIPTION", "BOX NO", "QTY"]
+    df = df[[c for c in final_cols if c in df.columns]]
+
     # Ensure QTY numeric
     if "QTY" in df.columns:
         df["QTY"] = pd.to_numeric(df["QTY"], errors="coerce").fillna(0)
 
-    # Priority
+    # Priority logic
     df["PRIORITY LEVEL"] = "NORMAL"
     if "QTY" in df.columns:
-        df.loc[df["QTY"] <= 1, "PRIORITY LEVEL"] = "URGENT"
         df.loc[df["QTY"] <= 3, "PRIORITY LEVEL"] = "HIGH"
+        df.loc[df["QTY"] <= 1, "PRIORITY LEVEL"] = "URGENT"
 
     return df
 
 
+# =========================
+# LOAD DATA SAFELY
+# =========================
+df = load_data()
+
 if df is None or df.empty:
-    st.error("Excel file could not be loaded or is empty.")
+    st.warning("⚠ No data available after processing.")
     st.stop()
 
-# --------------------------------------------------
-# Title
-# --------------------------------------------------
-st.title("🔧 Spare Parts Inventory Dashboard")
+# =========================
+# KPI METRICS
+# =========================
+col1, col2, col3, col4 = st.columns(4)
 
-# --------------------------------------------------
-# Sidebar Filters
-# --------------------------------------------------
-st.sidebar.header("🔍 Filters")
+col1.metric("Total Parts", len(df))
+col2.metric("Urgent", (df["PRIORITY LEVEL"] == "URGENT").sum())
+col3.metric("High Priority", (df["PRIORITY LEVEL"] == "HIGH").sum())
+col4.metric("Normal", (df["PRIORITY LEVEL"] == "NORMAL").sum())
 
-search = st.sidebar.text_input("Search (Part No / Description / Box)")
-low_stock = st.sidebar.checkbox("Low Stock Only (Qty ≤ 3)")
-
-priority_filter = st.sidebar.multiselect(
-    "Priority Level",
-    ["URGENT", "HIGH", "NORMAL"],
-    default=["URGENT", "HIGH", "NORMAL"]
-)
-
-# --------------------------------------------------
-# Apply Filters
-# --------------------------------------------------
-filtered_df = df.copy()
-
-# Search across all text columns
-if search:
-    search = search.lower()
-    text_cols = filtered_df.select_dtypes(include=["object"]).columns
-    filtered_df = filtered_df[
-        filtered_df[text_cols]
-        .astype(str)
-        .apply(lambda r: r.str.lower().str.contains(search).any(), axis=1)
-    ]
-
-if low_stock and "QTY" in filtered_df.columns:
-    filtered_df = filtered_df[filtered_df["QTY"] <= 3]
-
-filtered_df = filtered_df[
-    filtered_df["PRIORITY LEVEL"].isin(priority_filter)
-]
-
-# --------------------------------------------------
-# KPI Metrics
-# --------------------------------------------------
-c1, c2, c3 = st.columns(3)
-
-c1.metric("Total Parts", len(df))
-c2.metric("Urgent", (df["PRIORITY LEVEL"] == "URGENT").sum())
-c3.metric("High Priority", (df["PRIORITY LEVEL"] == "HIGH").sum())
-
-# --------------------------------------------------
-# Priority Chart
-# --------------------------------------------------
-st.subheader("📊 Priority Distribution")
-
-priority_chart = (
-    df["PRIORITY LEVEL"]
-    .value_counts()
-    .reindex(["URGENT", "HIGH", "NORMAL"], fill_value=0)
-)
-
-st.bar_chart(priority_chart)
-
-# --------------------------------------------------
-# Highlight Rows
-# --------------------------------------------------
-def highlight_priority(row):
-    if row["PRIORITY LEVEL"] == "URGENT":
-        return ["background-color:#ffcccc"] * len(row)
-    elif row["PRIORITY LEVEL"] == "HIGH":
-        return ["background-color:#fff2cc"] * len(row)
-    return [""] * len(row)
-
-# --------------------------------------------------
-# Table
-# --------------------------------------------------
+# =========================
+# SEARCH
+# =========================
 st.subheader("📋 Spare Parts List")
 
-st.dataframe(
-    filtered_df.style.apply(highlight_priority, axis=1),
-    use_container_width=True
-)
+search = st.text_input("🔍 Search Part Number or Description")
 
-# --------------------------------------------------
-# Download
-# --------------------------------------------------
+filtered_df = df.copy()
+if search:
+    filtered_df = filtered_df[
+        filtered_df["PART NO"].astype(str).str.contains(search, case=False, na=False)
+        | filtered_df["DESCRIPTION"].astype(str).str.contains(search, case=False, na=False)
+    ]
+
+st.dataframe(filtered_df, use_container_width=True)
+
+# =========================
+# DOWNLOAD
+# =========================
 output = BytesIO()
-filtered_df.to_excel(output, index=False)
+filtered_df.to_excel(output, index=False, engine="openpyxl")
 output.seek(0)
 
 st.download_button(
-    "⬇️ Download Filtered Data",
+    label="⬇️ Download Filtered Data (Excel)",
     data=output,
-    file_name="spare_parts_filtered.xlsx",
+    file_name="filtered_spare_parts.xlsx",
     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 )
 st.write("Final Columns Used:")
-st.write(df.columns.tolist())
+st.write(list(df.columns))
+
 
 
 
