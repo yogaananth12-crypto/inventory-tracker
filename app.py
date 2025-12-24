@@ -2,15 +2,21 @@ import streamlit as st
 import pandas as pd
 from io import BytesIO
 import zipfile
+import os
 
 st.set_page_config(page_title="Spare Parts Inventory", layout="wide")
-st.title("🔧 Spare Parts Inventory Dashboard (Multi-File + Safe Save)")
+st.title("🔧 Spare Parts Inventory Dashboard")
+
+# =========================
+# CONFIG
+# =========================
+DATA_FOLDER = "inventory_files"
 
 # =========================
 # HEADER DETECTION
 # =========================
-def detect_header_row(file):
-    preview = pd.read_excel(file, header=None, nrows=6)
+def detect_header_row(filepath):
+    preview = pd.read_excel(filepath, header=None, nrows=6)
     for i in range(len(preview)):
         row = preview.iloc[i].astype(str).str.upper()
         if any(k in cell for cell in row for k in ["PART", "QTY", "DESC"]):
@@ -20,9 +26,9 @@ def detect_header_row(file):
 # =========================
 # LOAD FILE
 # =========================
-def load_single_file(file, source_name):
-    header = detect_header_row(file)
-    original_df = pd.read_excel(file, header=header)
+def load_single_file(filepath):
+    header = detect_header_row(filepath)
+    original_df = pd.read_excel(filepath, header=header)
 
     df = original_df.copy()
     df.columns = df.columns.astype(str).str.strip().str.upper()
@@ -51,11 +57,10 @@ def load_single_file(file, source_name):
         col = detect_column(cols, keys)
         if col:
             rename_map[col] = std
-            reverse_map[std] = col  # for writeback
+            reverse_map[std] = col
 
     df = df.rename(columns=rename_map)
 
-    # Ensure required columns
     for col in ["PART NO", "DESCRIPTION", "BOX NO", "QTY"]:
         if col not in df.columns:
             df[col] = 0 if col == "QTY" else ""
@@ -63,9 +68,9 @@ def load_single_file(file, source_name):
     df = df[["PART NO", "DESCRIPTION", "BOX NO", "QTY"]]
     df["QTY"] = pd.to_numeric(df["QTY"], errors="coerce").fillna(0)
 
-    df["SOURCE FILE"] = source_name
+    df["SOURCE FILE"] = os.path.basename(filepath)
 
-    return df, original_df, reverse_map, header
+    return df, original_df, reverse_map
 
 # =========================
 # PRIORITY
@@ -77,30 +82,30 @@ def apply_priority(df):
     return df
 
 # =========================
-# UPLOAD
+# LOAD ALL FILES FROM FOLDER
 # =========================
-files = st.file_uploader(
-    "📤 Upload Excel Files",
-    type=["xlsx"],
-    accept_multiple_files=True
-)
+excel_files = [
+    os.path.join(DATA_FOLDER, f)
+    for f in os.listdir(DATA_FOLDER)
+    if f.lower().endswith(".xlsx")
+]
 
-if not files:
+if not excel_files:
+    st.error("No Excel files found in inventory_files folder.")
     st.stop()
 
-dataframes = []
+all_data = []
 file_store = {}
 
-for file in files:
-    df, original, col_map, header = load_single_file(file, file.name)
-    dataframes.append(df)
-    file_store[file.name] = {
+for path in excel_files:
+    df, original, col_map = load_single_file(path)
+    all_data.append(df)
+    file_store[os.path.basename(path)] = {
         "original": original,
-        "qty_col": col_map.get("QTY"),
-        "header": header
+        "qty_col": col_map.get("QTY")
     }
 
-inventory = apply_priority(pd.concat(dataframes, ignore_index=True))
+inventory = apply_priority(pd.concat(all_data, ignore_index=True))
 
 if "inventory" not in st.session_state:
     st.session_state.inventory = inventory
@@ -108,37 +113,52 @@ if "inventory" not in st.session_state:
 df = st.session_state.inventory
 
 # =========================
-# SEARCH
+# METRICS
+# =========================
+c1, c2, c3, c4 = st.columns(4)
+c1.metric("Total Parts", len(df))
+c2.metric("Urgent", (df["PRIORITY LEVEL"] == "URGENT").sum())
+c3.metric("High", (df["PRIORITY LEVEL"] == "HIGH").sum())
+c4.metric("Normal", (df["PRIORITY LEVEL"] == "NORMAL").sum())
+
+# =========================
+# FILTERS
 # =========================
 search = st.text_input("🔍 Search Part No / Description")
+source_filter = st.multiselect(
+    "Source File",
+    df["SOURCE FILE"].unique(),
+    df["SOURCE FILE"].unique()
+)
+
+filtered_df = df[df["SOURCE FILE"].isin(source_filter)]
 
 if search:
-    df = df[
-        df["PART NO"].astype(str).str.contains(search, case=False, na=False)
-        | df["DESCRIPTION"].astype(str).str.contains(search, case=False, na=False)
+    filtered_df = filtered_df[
+        filtered_df["PART NO"].astype(str).str.contains(search, case=False, na=False)
+        | filtered_df["DESCRIPTION"].astype(str).str.contains(search, case=False, na=False)
     ]
 
 # =========================
-# EDIT
+# EDITABLE TABLE
 # =========================
-edited = st.data_editor(
-    df,
+edited_df = st.data_editor(
+    filtered_df,
     use_container_width=True,
     disabled=["PART NO", "DESCRIPTION", "BOX NO", "SOURCE FILE", "PRIORITY LEVEL"]
 )
 
-if not edited.equals(df):
-    st.session_state.inventory.update(edited)
+if not edited_df.equals(filtered_df):
+    st.session_state.inventory.update(edited_df)
     st.session_state.inventory = apply_priority(st.session_state.inventory)
 
 # =========================
-# SAVE BACK
+# DOWNLOAD UPDATED FILES
 # =========================
-st.subheader("💾 Download Updated Files")
+st.subheader("💾 Download Updated Excel Files")
 
 zip_buffer = BytesIO()
 with zipfile.ZipFile(zip_buffer, "w") as zipf:
-
     for fname, info in file_store.items():
         original = info["original"].copy()
         qty_col = info["qty_col"]
@@ -165,11 +185,12 @@ with zipfile.ZipFile(zip_buffer, "w") as zipf:
 zip_buffer.seek(0)
 
 st.download_button(
-    "⬇️ Download UPDATED Excel Files (ZIP)",
+    "⬇️ Download All Updated Files (ZIP)",
     zip_buffer,
     "updated_inventory.zip",
     "application/zip"
 )
+
 
 
 
