@@ -45,9 +45,10 @@ if st.button("💾 Save QTY"):
     with st.spinner("Saving changes..."):
         requests.post(SAVE_URL, json=updates)
 
-    st.success("✅ Saved! Refresh to see updates")
+    st.success("✅ Saved! Other users will see updates after refresh")
     st.cache_data.clear()
-    st.experimental_rerun()
+    st.rerun()
+
 
 
 
