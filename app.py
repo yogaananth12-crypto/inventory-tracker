@@ -11,7 +11,7 @@ SAVE_URL = "https://script.google.com/macros/s/AKfycbzr0HSp2GQKW8MNZi2WfZA5SP3XJ
 
 CSV_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv"
 
-@st.cache_data(ttl=5)
+@st.cache_data(ttl=2)
 def load_data():
     df = pd.read_csv(CSV_URL)
     df.columns = df.columns.str.upper()
@@ -33,17 +33,23 @@ edited_df = st.data_editor(
     disabled=["S.NO", "PART NO", "DESCRIPTION", "BOX NO"],
     use_container_width=True
 )
-
 if st.button("💾 Save QTY"):
+    updates = []
+
     for _, row in edited_df.iterrows():
-        payload = {
+        updates.append({
             "part_no": row["PART NO"],
             "qty": int(row["QTY"])
-        }
-        requests.post(SAVE_URL, json=payload)
+        })
 
-    st.success("✅ Saved! Other users will see the update")
+    with st.spinner("Saving changes..."):
+        requests.post(SAVE_URL, json=updates)
+
+    st.success("✅ Saved! Refresh to see updates")
     st.cache_data.clear()
+    st.experimental_rerun()
+
+
 
 
 
