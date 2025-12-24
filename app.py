@@ -1,94 +1,62 @@
 import streamlit as st
 import pandas as pd
-from io import BytesIO
-import os
+import gspread
+from google.oauth2.service_account import Credentials
 
 # =========================
 # CONFIG
 # =========================
 st.set_page_config(page_title="Spare Parts Inventory", layout="wide")
-EXCEL_FILE = "PCB BOARDS (CUP BOARD).xlsx"
-
 st.title("🔧 Spare Parts Inventory Dashboard")
+
+SHEET_ID = "PASTE_YOUR_SHEET_ID_HERE"
+SHEET_NAME = "Sheet1"   # change if your tab name is different
+
+# =========================
+# GOOGLE SHEETS CONNECTION
+# =========================
+scope = [
+    "https://spreadsheets.google.com/feeds",
+    "https://www.googleapis.com/auth/drive"
+]
+
+creds = Credentials.from_service_account_info(
+    st.secrets["gcp_service_account"],
+    scopes=scope
+)
+
+client = gspread.authorize(creds)
+sheet = client.open_by_key(SHEET_ID).worksheet(SHEET_NAME)
 
 # =========================
 # LOAD DATA
 # =========================
-@st.cache_data(show_spinner=False)
+@st.cache_data(ttl=5)
 def load_data():
-    if not os.path.exists(EXCEL_FILE):
-        st.error(f"❌ Excel file not found: {EXCEL_FILE}")
-        return None
-
-    # Read Excel (skip first title row if needed)
-    df = pd.read_excel(EXCEL_FILE, skiprows=1)
+    data = sheet.get_all_records()
+    df = pd.DataFrame(data)
 
     # Clean column names
     df.columns = df.columns.astype(str).str.strip().str.upper()
 
-    # Remove UNNAMED columns
-    df = df.loc[:, ~df.columns.str.contains("^UNNAMED")]
+    # Ensure columns
+    for col in ["S.NO", "PART NO", "DESCRIPTION", "BOX NO", "QTY"]:
+        if col not in df.columns:
+            df[col] = ""
 
-    # ---------- AUTO COLUMN DETECTION ----------
-    def detect_column(columns, keywords):
-        for col in columns:
-            for key in keywords:
-                if key in col:
-                    return col
-        return None
-
-    cols = df.columns.tolist()
-
-    col_sno  = detect_column(cols, ["S.NO", "SNO", "SERIAL"])
-    col_part = detect_column(cols, ["PART"])
-    col_desc = detect_column(cols, ["DESC", "DESCRIPTION"])
-    col_box  = detect_column(cols, ["BOX", "BIN", "LOCATION"])
-    col_qty  = detect_column(cols, ["QTY", "QUANTITY", "STOCK"])
-
-    rename_map = {}
-    if col_sno:  rename_map[col_sno]  = "S.NO"
-    if col_part: rename_map[col_part] = "PART NO"
-    if col_desc: rename_map[col_desc] = "DESCRIPTION"
-    if col_box:  rename_map[col_box]  = "BOX NO"
-    if col_qty:  rename_map[col_qty]  = "QTY"
-
-    df = df.rename(columns=rename_map)
-
-    # Keep only required columns
-    required = ["S.NO", "PART NO", "DESCRIPTION", "BOX NO", "QTY"]
-    df = df[[c for c in required if c in df.columns]]
-
-    # Drop empty rows (IMPORTANT)
-    df = df.dropna(subset=["PART NO", "DESCRIPTION"], how="all")
-
-    # Ensure QTY numeric
-    df["QTY"] = pd.to_numeric(df.get("QTY", 0), errors="coerce").fillna(0).astype(int)
+    df["QTY"] = pd.to_numeric(df["QTY"], errors="coerce").fillna(0).astype(int)
 
     # Priority
     df["PRIORITY LEVEL"] = "NORMAL"
     df.loc[df["QTY"] <= 3, "PRIORITY LEVEL"] = "HIGH"
     df.loc[df["QTY"] <= 1, "PRIORITY LEVEL"] = "URGENT"
 
-    return df.reset_index(drop=True)
+    return df
 
-# =========================
-# SAVE DATA
-# =========================
-def save_data(df):
-    save_df = df.drop(columns=["PRIORITY LEVEL"])
-    save_df.to_excel(EXCEL_FILE, index=False)
-
-# =========================
-# MAIN
-# =========================
 df = load_data()
 
-if df is None or df.empty:
-    st.warning("⚠ No valid spare parts found.")
-    st.stop()
-
 # =========================
-# KPI
+# METRICS
 # =========================
 c1, c2, c3, c4 = st.columns(4)
 c1.metric("Total Parts", len(df))
@@ -100,7 +68,6 @@ c4.metric("Normal", (df["PRIORITY LEVEL"] == "NORMAL").sum())
 # SEARCH
 # =========================
 st.subheader("📋 Spare Parts List")
-
 search = st.text_input("🔍 Search Part Number or Description")
 
 filtered_df = df.copy()
@@ -116,39 +83,22 @@ if search:
 edited_df = st.data_editor(
     filtered_df,
     use_container_width=True,
-    disabled=["S.NO", "PART NO", "DESCRIPTION", "BOX NO", "PRIORITY LEVEL"],
-    key="editor"
+    disabled=["S.NO", "PART NO", "DESCRIPTION", "BOX NO", "PRIORITY LEVEL"]
 )
 
 # =========================
-# SAVE BUTTON
+# SAVE TO GOOGLE SHEETS
 # =========================
 if st.button("💾 Save Changes"):
-    df.update(edited_df)
+    try:
+        for i, row in edited_df.iterrows():
+            sheet.update_cell(i + 2, 5, int(row["QTY"]))  # QTY column
 
-    # Recalculate priority
-    df["PRIORITY LEVEL"] = "NORMAL"
-    df.loc[df["QTY"] <= 3, "PRIORITY LEVEL"] = "HIGH"
-    df.loc[df["QTY"] <= 1, "PRIORITY LEVEL"] = "URGENT"
+        st.cache_data.clear()
+        st.success("✅ Quantity updated for ALL users!")
 
-    save_data(df)
-    st.success("✅ Inventory updated successfully!")
-
-# =========================
-# DOWNLOAD
-# =========================
-output = BytesIO()
-df.to_excel(output, index=False, engine="openpyxl")
-output.seek(0)
-
-st.download_button(
-    "⬇️ Download Current Inventory",
-    data=output,
-    file_name="spare_parts_inventory.xlsx",
-    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-)
-st.write("Columns Used:")
-st.write(list(df.columns))
+    except Exception as e:
+        st.error(f"❌ Error saving data: {e}")
 
 
 
