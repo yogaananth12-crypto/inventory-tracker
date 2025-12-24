@@ -43,7 +43,7 @@ for _, row in edited_df.iterrows():
             "part_no": row["PART NO"],
             "qty": int(row["QTY"])
         })
-with st.spinner("Saving changes..."):
+st.spinner("Saving changes..."):
 response = requests.post(SAVE_URL, json=updates)
 if response.status_code == 200:
         st.success("✅ Saved successfully! Refreshing data...")
