@@ -170,11 +170,6 @@ st.download_button(
     file_name="spare_parts_filtered.xlsx",
     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 )
-
-# --------------------------------------------------
-# Debug Info
-# --------------------------------------------------
-st.expander("🛠 Column Detection Info"):
 st.write("Final Columns Used:")
 st.write(df.columns.tolist())
 
