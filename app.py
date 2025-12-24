@@ -3,24 +3,26 @@ import pandas as pd
 from io import BytesIO
 
 st.set_page_config(page_title="Spare Parts Inventory", layout="wide")
-
-st.title("🔧 Spare Parts Inventory Dashboard (POC)")
+st.title("🔧 Spare Parts Inventory Dashboard")
 
 # =========================
-# LOAD DATA FUNCTION
+# AUTO HEADER DETECTION
 # =========================
-def load_data():
-    try:
-        # Skip title row
-        df = pd.read_excel(
-            "PCB BOARDS (CUP BOARD).xlsx",
-            skiprows=1
-        )
-    except Exception as e:
-        st.error(f"❌ Error loading Excel file: {e}")
-        return None
+def detect_header_row(file):
+    preview = pd.read_excel(file, header=None, nrows=6)
+    for i in range(len(preview)):
+        row = preview.iloc[i].astype(str).str.upper()
+        if any("PART" in c or "QTY" in c or "DESC" in c for c in row):
+            return i
+    return 0
 
-    # Clean column names
+# =========================
+# LOAD DATA
+# =========================
+def load_data(file):
+    header_row = detect_header_row(file)
+
+    df = pd.read_excel(file, header=header_row)
     df.columns = df.columns.astype(str).str.strip().str.upper()
 
     # Remove UNNAMED columns
@@ -55,44 +57,50 @@ def load_data():
     final_cols = ["S.NO", "PART NO", "DESCRIPTION", "BOX NO", "QTY"]
     df = df[[c for c in final_cols if c in df.columns]]
 
-    # Ensure QTY numeric
+    # Qty numeric
     if "QTY" in df.columns:
         df["QTY"] = pd.to_numeric(df["QTY"], errors="coerce").fillna(0)
 
-    # Priority logic
+    # Priority
     df["PRIORITY LEVEL"] = "NORMAL"
-    if "QTY" in df.columns:
-        df.loc[df["QTY"] <= 3, "PRIORITY LEVEL"] = "HIGH"
-        df.loc[df["QTY"] <= 1, "PRIORITY LEVEL"] = "URGENT"
+    df.loc[df["QTY"] <= 3, "PRIORITY LEVEL"] = "HIGH"
+    df.loc[df["QTY"] <= 1, "PRIORITY LEVEL"] = "URGENT"
 
     return df
 
-
 # =========================
-# LOAD DATA SAFELY
+# FILE UPLOAD
 # =========================
-df = load_data()
+uploaded_file = st.file_uploader(
+    "📤 Upload Spare Parts Excel File",
+    type=["xlsx"]
+)
 
-if df is None or df.empty:
-    st.warning("⚠ No data available after processing.")
+if not uploaded_file:
+    st.info("Please upload an Excel file to continue.")
+    st.stop()
+
+df = load_data(uploaded_file)
+
+if df.empty:
+    st.warning("No valid data detected.")
     st.stop()
 
 # =========================
 # KPI METRICS
 # =========================
-col1, col2, col3, col4 = st.columns(4)
-
-col1.metric("Total Parts", len(df))
-col2.metric("Urgent", (df["PRIORITY LEVEL"] == "URGENT").sum())
-col3.metric("High Priority", (df["PRIORITY LEVEL"] == "HIGH").sum())
-col4.metric("Normal", (df["PRIORITY LEVEL"] == "NORMAL").sum())
+c1, c2, c3, c4 = st.columns(4)
+c1.metric("Total Parts", len(df))
+c2.metric("Urgent", (df["PRIORITY LEVEL"] == "URGENT").sum())
+c3.metric("High", (df["PRIORITY LEVEL"] == "HIGH").sum())
+c4.metric("Normal", (df["PRIORITY LEVEL"] == "NORMAL").sum())
 
 # =========================
 # SEARCH
 # =========================
 st.subheader("📋 Spare Parts List")
 
-search = st.text_input("🔍 Search Part Number or Description")
+search = st.text_input("🔍 Search Part No or Description")
 
 filtered_df = df.copy()
 if search:
@@ -101,7 +109,20 @@ if search:
         | filtered_df["DESCRIPTION"].astype(str).str.contains(search, case=False, na=False)
     ]
 
-st.dataframe(filtered_df, use_container_width=True)
+# =========================
+# COLOR PRIORITY
+# =========================
+def color_priority(row):
+    if row["PRIORITY LEVEL"] == "URGENT":
+        return ["background-color:#ffcccc"] * len(row)
+    if row["PRIORITY LEVEL"] == "HIGH":
+        return ["background-color:#fff2cc"] * len(row)
+    return [""] * len(row)
+
+st.dataframe(
+    filtered_df.style.apply(color_priority, axis=1),
+    use_container_width=True
+)
 
 # =========================
 # DOWNLOAD
@@ -111,13 +132,12 @@ filtered_df.to_excel(output, index=False, engine="openpyxl")
 output.seek(0)
 
 st.download_button(
-    label="⬇️ Download Filtered Data (Excel)",
+    "⬇️ Download Filtered Data (Excel)",
     data=output,
     file_name="filtered_spare_parts.xlsx",
     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 )
-st.write("Final Columns Used:")
-st.write(list(df.columns))
+st.write("Detected Columns:", list(df.columns))
 
 
 
