@@ -32,7 +32,6 @@ if search:
     ]
 
 edited_df = st.data_editor(
-    df,
     disabled=["S.NO", "PART NO", "DESCRIPTION", "BOX NO"],
     use_container_width=True
 )
