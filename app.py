@@ -9,7 +9,7 @@ st.title("🔧 Spare Parts Inventory")
 SHEET_ID = "1PY9T5x0sqaDnHTZ5RoDx3LYGBu8bqOT7j4itdlC9yuE"
 SAVE_URL = "https://script.google.com/macros/s/AKfycbzr0HSp2GQKW8MNZi2WfZA5SP3XJOjgbHa_P0g3803_yVVgAFcak_6nV1_Tk31TJmad/exec"
 
-CSV_URL = f"https://docs.google.com/spreadsheets/d/{1PY9T5x0sqaDnHTZ5RoDx3LYGBu8bqOT7j4itdlC9yuE}/export?format=csv"
+CSV_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv"
 
 @st.cache_data(ttl=5)
 def load_data():
