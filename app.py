@@ -23,6 +23,9 @@ def load_data():
     # Normalize column names
     df.columns = df.columns.str.strip().str.upper()
 
+    # 🔴 REMOVE UNNAMED COLUMNS
+    df = df.loc[:, ~df.columns.str.contains("^UNNAMED")]
+
     # Ensure QTY is numeric
     if "QTY" in df.columns:
         df["QTY"] = pd.to_numeric(df["QTY"], errors="coerce").fillna(0)
@@ -156,7 +159,7 @@ st.dataframe(
 )
 
 # --------------------------------------------------
-# Download Button (FIXED)
+# Download Button
 # --------------------------------------------------
 output = BytesIO()
 filtered_df.to_excel(output, index=False, engine="openpyxl")
@@ -180,6 +183,7 @@ st.dataframe(
     priority_df.style.apply(highlight_priority, axis=1),
     use_container_width=True
 )
+st.write("Detected columns:")
 st.write(df.columns.tolist())
 
 
