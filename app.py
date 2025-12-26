@@ -1,66 +1,115 @@
 import streamlit as st
 import pandas as pd
 import requests
-import json
 
+# =========================
+# CONFIG
+# =========================
 st.set_page_config(page_title="Spare Parts Inventory", layout="wide")
 
-SHEET_ID = "1PY9T5x0sqaDnHTZ5RoDx3LYGBu8bqOT7j4itdlC9yuE"
-CSV_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv"
-SAVE_URL = "https://script.google.com/macros/s/AKfycbyCgYxOPz7M7pWRKC0fSMxSyiOzx6TtEHb6irnVwBm8QdGzZpV-_J_f3edls6jz-KxS_Q/exec"
+SHEET_CSV_URL = "f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv"
+SAVE_URL = "https://script.google.com/macros/s/AKfycbx0WFr35KlCjlSgCwOJB0waE86knqMt__xDy1bNKolTVdxve6LV4bwR-E9PJe13K8u8Gw/exec"
 
-@st.cache_data(ttl=3)
+st.title("🔧 Spare Parts Inventory")
+
+# =========================
+# LOAD DATA
+# =========================
+@st.cache_data(ttl=30)
 def load_data():
-    df = pd.read_csv(CSV_URL)
-    df.columns = df.columns.str.strip().str.upper()
+    df = pd.read_csv(SHEET_CSV_URL)
+
+    # Clean column names
+    df.columns = df.columns.astype(str).str.strip().str.upper()
+
+    # Remove UNNAMED columns
     df = df.loc[:, ~df.columns.str.contains("^UNNAMED")]
 
-    for col in ["LIFT NO", "CALL OUT", "DATE"]:
+    # Ensure required columns
+    required = [
+        "S.NO", "PART NO", "DESCRIPTION", "BOX NO",
+        "QTY", "LIFT NO", "CALL OUT", "DATE"
+    ]
+    for col in required:
         if col not in df.columns:
             df[col] = ""
 
     df["QTY"] = pd.to_numeric(df["QTY"], errors="coerce").fillna(0).astype(int)
 
-    return df
+    return df[required]
 
-st.title("🔧 Spare Parts Inventory")
 
 df = load_data()
 
+# =========================
+# SEARCH BAR
+# =========================
+st.subheader("🔍 Search")
+
+search = st.text_input(
+    "Search by Part No / Description / Box No",
+    placeholder="Type here..."
+).strip().lower()
+
+filtered_df = df.copy()
+if search:
+    filtered_df = filtered_df[
+        df["PART NO"].astype(str).str.lower().str.contains(search, na=False)
+        | df["DESCRIPTION"].astype(str).str.lower().str.contains(search, na=False)
+        | df["BOX NO"].astype(str).str.lower().str.contains(search, na=False)
+    ]
+
+# =========================
+# DATA EDITOR
+# =========================
 edited_df = st.data_editor(
-    df,
+    filtered_df,
     disabled=["S.NO", "PART NO", "DESCRIPTION", "BOX NO"],
-    use_container_width=True
+    use_container_width=True,
+    hide_index=True,
+    num_rows="fixed"
 )
 
+# =========================
+# SAVE CHANGES
+# =========================
 if st.button("💾 Save Changes"):
-    payload = []
+    with st.spinner("Saving changes..."):
+        updates = []
 
-    for _, row in edited_df.iterrows():
-        payload.append({
-            "sno": str(row["S.NO"]),
-            "qty": int(row["QTY"]),
-            "lift_no": "" if pd.isna(row["LIFT NO"]) else str(row["LIFT NO"]),
-            "call_out": "" if pd.isna(row["CALL OUT"]) else str(row["CALL OUT"]),
-            "date": "" if pd.isna(row["DATE"]) else str(row["DATE"]),
-        })
+        for _, row in edited_df.iterrows():
+            original_row = df[df["S.NO"] == row["S.NO"]].iloc[0]
 
-    payload = json.loads(json.dumps(payload))
+            if (
+                row["QTY"] != original_row["QTY"]
+                or row["LIFT NO"] != original_row["LIFT NO"]
+                or row["CALL OUT"] != original_row["CALL OUT"]
+                or row["DATE"] != original_row["DATE"]
+            ):
+                updates.append({
+                    "sno": row["S.NO"],
+                    "qty": int(row["QTY"]),
+                    "lift_no": str(row["LIFT NO"]),
+                    "call_out": str(row["CALL OUT"]),
+                    "date": str(row["DATE"]),
+                })
 
-    with st.spinner("Saving to Google Sheet..."):
-        r = requests.post(
-            SAVE_URL,
-            data=json.dumps(payload),
-            headers={"Content-Type": "application/json"},
-            timeout=20
-        )
+        if not updates:
+            st.info("No changes to save.")
+        else:
+            r = requests.post(
+                SAVE_URL,
+                json={"updates": updates},
+                timeout=20
+            )
 
-    if r.status_code == 200:
-        st.success("✅ Sheet updated successfully (stable & accurate)")
-        st.cache_data.clear()
-        st.rerun()
-    else:
-        st.error("❌ Save failed")
+            if r.status_code == 200 and r.text.strip() == "OK":
+                st.success("✅ Saved successfully")
+                st.cache_data.clear()
+                st.rerun()
+            else:
+                st.error("❌ Save failed. Check Apps Script.")
+
 
 
 
