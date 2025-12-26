@@ -4,7 +4,7 @@ import requests
 
 # ================= CONFIG =================
 SHEET_ID = "1PY9T5x0sqaDnHTZ5RoDx3LYGBu8bqOT7j4itdlC9yuE"
-SAVE_URL = "https://script.google.com/macros/s/AKfycby9qRj0FaKST3yXt286FCiQY_glcRHPIH6uCxXODSHkFFqTOsfmhwDLIzavL17UrXBztQ/exec"
+SAVE_URL = "https://script.google.com/macros/s/AKfycbzzVQjdwI0zdW28OyRsNt9DEZwG510uKVMQacbYZ-nXdwFqGDdmorqaVwVl04QDJgapKQ/exec"
 CSV_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv"
 
 st.set_page_config(layout="wide")
