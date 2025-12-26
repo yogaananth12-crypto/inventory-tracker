@@ -6,7 +6,7 @@ st.set_page_config(page_title="Spare Parts Inventory", layout="wide")
 
 SHEET_ID = "1PY9T5x0sqaDnHTZ5RoDx3LYGBu8bqOT7j4itdlC9yuE"
 CSV_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv"
-SAVE_URL = "PASTE_NEW_APPS_SCRIPT_URL_HERE"
+SAVE_URL = https://script.google.com/macros/s/AKfycbxyha6E0BNwYksazDMMW2cG2q5I8K6xZPFMfnpuN12Bo62ya1nRzLG9Z1ukCW4ZY7LKvw/exec""
 
 @st.cache_data(ttl=5)
 def load_data():
