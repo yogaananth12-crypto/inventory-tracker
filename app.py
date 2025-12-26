@@ -9,7 +9,7 @@ st.title("🔧 Spare Parts Inventory (Shared Live)")
 
 # ================= CONFIG =================
 SHEET_ID = "1PY9T5x0sqaDnHTZ5RoDx3LYGBu8bqOT7j4itdlC9yuE"
-SAVE_URL = "https://script.google.com/macros/s/AKfycbw3uSVNIBC01cDjtMNrVfuwnmO16OA0rb_dgoRDRwZzafigwJrsJKUfK_qFzvUx1FwJ0Q/exec"
+SAVE_URL = "https://script.google.com/macros/s/AKfycbyf4T3Uu2LPwApkNeJltUWObHnPi3MCgu-rbgrg_gMp55PZSCvNKbDiXrDodEthLIHzxw/exec"
 
 CSV_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv"
 
