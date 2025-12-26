@@ -54,7 +54,7 @@ if st.button("💾 Save QTY"):
             "qty": int(row["QTY"])
         })
 
-     st.spinner("Saving changes...")
+    with st.spinner("Saving changes..."):
         response = requests.post(
             SAVE_URL,
             data=json.dumps(updates),
@@ -67,9 +67,6 @@ if st.button("💾 Save QTY"):
         st.rerun()
     else:
         st.error("❌ Save failed. Check Apps Script.")
-
-
-
 # ================= FOOTER =================
 st.caption("ℹ️ After one user saves, other users press F5 to see updates")
 
