@@ -3,18 +3,15 @@ import pandas as pd
 import requests
 
 # =========================
-# PAGE CONFIG
+# CONFIG
 # =========================
 st.set_page_config(page_title="Spare Parts Inventory", layout="wide")
 st.title("🔧 Spare Parts Inventory")
 
-# =========================
-# CONFIG – CHANGE THESE
-# =========================
 SHEET_ID = "1PY9T5x0sqaDnHTZ5RoDx3LYGBu8bqOT7j4itdlC9yuE"
 SHEET_CSV_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv"
 
-SAVE_URL = "https://script.google.com/macros/s/AKfycbx0WFr35KlCjlSgCwOJB0waE86knqMt__xDy1bNKolTVdxve6LV4bwR-E9PJe13K8u8Gw/exec"
+SAVE_URL = "https://script.google.com/macros/s/AKfycbwrAPYoSJbu4o_-nbpbZf_N-VQH3DusxMEt7DUXIcwQQmJoQa1Uj_L3uyuiO082bAqjjA/exec"
 
 # =========================
 # LOAD DATA
@@ -22,65 +19,51 @@ SAVE_URL = "https://script.google.com/macros/s/AKfycbx0WFr35KlCjlSgCwOJB0waE86kn
 @st.cache_data(ttl=30)
 def load_data():
     df = pd.read_csv(SHEET_CSV_URL)
-
-    # Clean headers
     df.columns = df.columns.astype(str).str.strip().str.upper()
-
-    # Remove UNNAMED columns
     df = df.loc[:, ~df.columns.str.contains("^UNNAMED")]
 
-    # Required columns
-    required_cols = [
+    required = [
         "S.NO", "PART NO", "DESCRIPTION", "BOX NO",
         "QTY", "LIFT NO", "CALL OUT", "DATE"
     ]
 
-    for col in required_cols:
+    for col in required:
         if col not in df.columns:
             df[col] = ""
 
     df["QTY"] = pd.to_numeric(df["QTY"], errors="coerce").fillna(0).astype(int)
-
-    return df[required_cols]
-
+    return df[required]
 
 df = load_data()
 
 # =========================
-# SEARCH BAR
+# SEARCH
 # =========================
-st.subheader("🔍 Search")
-
-search = st.text_input(
-    "Search by Part No / Description / Box No",
-    placeholder="Type here..."
-).strip().lower()
+search = st.text_input("🔍 Search Part / Description / Box").lower()
 
 filtered_df = df.copy()
 if search:
     filtered_df = filtered_df[
-        df["PART NO"].astype(str).str.lower().str.contains(search, na=False)
-        | df["DESCRIPTION"].astype(str).str.lower().str.contains(search, na=False)
-        | df["BOX NO"].astype(str).str.lower().str.contains(search, na=False)
+        df["PART NO"].str.lower().str.contains(search, na=False)
+        | df["DESCRIPTION"].str.lower().str.contains(search, na=False)
+        | df["BOX NO"].str.lower().str.contains(search, na=False)
     ]
 
 # =========================
-# DATA EDITOR
+# EDITOR
 # =========================
 edited_df = st.data_editor(
     filtered_df,
     disabled=["S.NO", "PART NO", "DESCRIPTION", "BOX NO"],
-    use_container_width=True,
     hide_index=True,
-    num_rows="fixed"
+    use_container_width=True
 )
 
 # =========================
-# SAVE CHANGES
+# SAVE
 # =========================
 if st.button("💾 Save Changes"):
-    with st.spinner("Saving changes..."):
-
+    with st.spinner("Saving..."):
         updates = []
 
         for _, row in edited_df.iterrows():
@@ -101,19 +84,19 @@ if st.button("💾 Save Changes"):
                 })
 
         if not updates:
-            st.info("No changes to save.")
+            st.info("No changes detected.")
         else:
             payload = {"updates": updates}
+            response = requests.post(SAVE_URL, json=payload, timeout=20)
 
-            r = requests.post(SAVE_URL, json=payload, timeout=20)
+            st.write("SERVER RESPONSE:", response.text)
 
-            if r.status_code == 200:
+            if response.status_code == 200:
                 st.success("✅ Saved successfully")
                 st.cache_data.clear()
                 st.rerun()
             else:
-                st.error(f"❌ Save failed (Status {r.status_code})")
-                st.write(r.text)
+                st.error("❌ Save failed")
 
 
 
