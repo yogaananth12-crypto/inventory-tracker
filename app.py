@@ -58,45 +58,12 @@ edited_df = st.data_editor(
     hide_index=True,
     use_container_width=True
 )
-
-# =========================
-# SAVE
-# =========================
 if st.button("💾 Save Changes"):
-    with st.spinner("Saving..."):
-        updates = []
+    r = requests.post(SAVE_URL)
+    st.write("STATUS:", r.status_code)
+    st.write("TEXT:", r.text)
 
-        for _, row in edited_df.iterrows():
-            original = df[df["S.NO"] == row["S.NO"]].iloc[0]
 
-            if (
-                row["QTY"] != original["QTY"]
-                or row["LIFT NO"] != original["LIFT NO"]
-                or row["CALL OUT"] != original["CALL OUT"]
-                or row["DATE"] != original["DATE"]
-            ):
-                updates.append({
-                    "sno": str(row["S.NO"]),
-                    "qty": int(row["QTY"]),
-                    "lift_no": str(row["LIFT NO"]),
-                    "call_out": str(row["CALL OUT"]),
-                    "date": str(row["DATE"]),
-                })
-
-        if not updates:
-            st.info("No changes detected.")
-        else:
-            payload = {"updates": updates}
-            response = requests.post(SAVE_URL, json=payload, timeout=20)
-
-            st.write("SERVER RESPONSE:", response.text)
-
-            if response.status_code == 200:
-                st.success("✅ Saved successfully")
-                st.cache_data.clear()
-                st.rerun()
-            else:
-                st.error("❌ Save failed")
 
 
 
