@@ -46,9 +46,8 @@ edited_df = st.data_editor(
 )
 
 if st.button("💾 Save QTY"):
-    updates = []
-
-    for _, row in edited_df.iterrows():
+    st.success("Button works")
+for _, row in edited_df.iterrows():
         updates.append({
             "part_no": str(row["PART NO"]),
             "qty": int(row["QTY"])
