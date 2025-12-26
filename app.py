@@ -1,3 +1,4 @@
+import json
 import streamlit as st
 import pandas as pd
 import requests
@@ -8,7 +9,7 @@ st.title("🔧 Spare Parts Inventory (Shared Live)")
 
 # ================= CONFIG =================
 SHEET_ID = "1PY9T5x0sqaDnHTZ5RoDx3LYGBu8bqOT7j4itdlC9yuE"
-SAVE_URL = "https://script.google.com/macros/s/AKfycbxcWy1TQcQmelHm3hgyTNao3bHBVbXddzP3ayhd2SaJc9kokJeqG-OGVnU9B9TBiZXzkA/exec"
+SAVE_URL = "https://script.google.com/macros/s/AKfycbw3uSVNIBC01cDjtMNrVfuwnmO16OA0rb_dgoRDRwZzafigwJrsJKUfK_qFzvUx1FwJ0Q/exec"
 
 CSV_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv"
 
@@ -43,24 +44,29 @@ edited_df = st.data_editor(
     num_rows="fixed"
 )
 
-# ================= SAVE =================
 if st.button("💾 Save QTY"):
     updates = []
 
     for _, row in edited_df.iterrows():
         updates.append({
-            "part_no": row["PART NO"],
+            "part_no": str(row["PART NO"]),
             "qty": int(row["QTY"])
         })
 
-        st.spinner("Saving changes...")
-        response = requests.post(SAVE_URL, json=updates)
+       st.spinner("Saving changes..."):
+        response = requests.post(
+            SAVE_URL,
+            data=json.dumps(updates),          # 👈 IMPORTANT
+            headers={"Content-Type": "application/json"},
+            timeout=20
+        )
 
     if response.status_code == 200:
-        st.success("✅ Saved successfully! Refreshing data...")
+        st.success("✅ Saved successfully!")
         st.rerun()
     else:
-        st.error("❌ Save failed. Check Apps Script.")
+        st.error("❌ Save failed")
+
 
 # ================= FOOTER =================
 st.caption("ℹ️ After one user saves, other users press F5 to see updates")
