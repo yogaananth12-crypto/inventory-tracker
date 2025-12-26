@@ -1,73 +1,89 @@
 import streamlit as st
 import pandas as pd
-import requests
-import json
 
 st.set_page_config(page_title="Spare Parts Inventory", layout="wide")
-
-SHEET_ID = "1PY9T5x0sqaDnHTZ5RoDx3LYGBu8bqOT7j4itdlC9yuE"
-CSV_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv"
-SAVE_URL = "https://script.google.com/macros/s/AKfycbxzy_K648Yu84hoONSSjPOj7YNdhCCZxnx0oyoQh77xA8O5UH3YkuM1l6jLLgu0XOxN0A/exec"
-
-@st.cache_data(ttl=3)
-def load_data():
-    df = pd.read_csv(CSV_URL)
-    df.columns = df.columns.str.strip().str.upper()
-    df = df.loc[:, ~df.columns.str.contains("^UNNAMED")]
-
-    for col in ["LIFT NO", "CALL OUT", "DATE"]:
-        if col not in df.columns:
-            df[col] = ""
-
-    df["QTY"] = pd.to_numeric(df["QTY"], errors="coerce").fillna(0).astype(int)
-
-    return df
-
 st.title("🔧 Spare Parts Inventory")
 
-df = load_data()
-search = st.text_input("🔍 Search Part No / Description")
+# ======================
+# LOAD DATA
+# ======================
+@st.cache_data
+def load_data():
+    df = pd.read_excel("PCB BOARDS (CUP BOARD).xlsx", skiprows=1)
 
-if search:
-    df = df[
-        df["PART NO"].astype(str).str.contains(search, case=False, na=False) |
-        df["DESCRIPTION"].astype(str).str.contains(search, case=False, na=False)
+    # Clean headers
+    df.columns = df.columns.astype(str).str.strip().str.upper()
+
+    # Remove UNNAMED columns
+    df = df.loc[:, ~df.columns.str.contains("^UNNAMED")]
+
+    # Required columns
+    required_cols = [
+        "S.NO", "PART NO", "DESCRIPTION", "BOX NO",
+        "QTY", "LIFT NO", "CALL OUT", "DATE"
     ]
 
+    # Add missing columns
+    for c in required_cols:
+        if c not in df.columns:
+            df[c] = ""
+
+    # Ensure QTY numeric
+    df["QTY"] = pd.to_numeric(df["QTY"], errors="coerce").fillna(0).astype(int)
+
+    return df[required_cols]
+
+df = load_data()
+
+# ======================
+# SEARCH BAR
+# ======================
+search = st.text_input("🔍 Search Part No or Description")
+
+filtered_df = df.copy()
+if search:
+    filtered_df = filtered_df[
+        filtered_df["PART NO"].astype(str).str.contains(search, case=False, na=False)
+        | filtered_df["DESCRIPTION"].astype(str).str.contains(search, case=False, na=False)
+    ]
+
+# ======================
+# DATA EDITOR
+# ======================
 edited_df = st.data_editor(
-    df,
+    filtered_df,
     disabled=["S.NO", "PART NO", "DESCRIPTION", "BOX NO"],
-    use_container_width=True
+    use_container_width=True,
+    hide_index=True
 )
 
-if st.button("💾 Save Changes"):
-    payload = []
+# ======================
+# SAVE LOGIC (LOCAL ONLY)
+# ======================
+if st.button("💾 SAVE"):
+    # Only compare columns that exist
+    editable_cols = ["QTY", "LIFT NO", "CALL OUT", "DATE"]
+    editable_cols = [c for c in editable_cols if c in df.columns]
 
-    for _, row in edited_df.iterrows():
-        payload.append({
-            "sno": str(row["S.NO"]),
-            "qty": int(row["QTY"]),
-            "lift_no": "" if pd.isna(row["LIFT NO"]) else str(row["LIFT NO"]),
-            "call_out": "" if pd.isna(row["CALL OUT"]) else str(row["CALL OUT"]),
-            "date": "" if pd.isna(row["DATE"]) else str(row["DATE"]),
-        })
+    changes = 0
 
-    payload = json.loads(json.dumps(payload))
+    for i in range(len(df)):
+        if not df.loc[i, editable_cols].equals(edited_df.loc[i, editable_cols]):
+            df.loc[i, editable_cols] = edited_df.loc[i, editable_cols]
+            changes += 1
 
-    with st.spinner("Saving to Google Sheet..."):
-        r = requests.post(
-            SAVE_URL,
-            data=json.dumps(payload),
-            headers={"Content-Type": "application/json"},
-            timeout=20
-        )
-
-    if r.status_code == 200:
-        st.success("✅ Sheet updated successfully (stable & accurate)")
-        st.cache_data.clear()
-        st.rerun()
+    if changes == 0:
+        st.info("No changes detected")
     else:
-        st.error("❌ Save failed")
+        df.to_excel("PCB BOARDS (CUP BOARD).xlsx", index=False)
+        st.success(f"Saved {changes} change(s) successfully")
+
+# ======================
+# DEBUG (OPTIONAL)
+# ======================
+with st.expander("🛠 Debug"):
+    st.write("Columns:", df.columns.tolist())
+
 
 
 
