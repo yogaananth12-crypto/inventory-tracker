@@ -6,85 +6,60 @@ st.title("🔧 Spare Parts Inventory")
 
 FILE_NAME = "PCB BOARDS (CUP BOARD).xlsx"
 
-# ======================
-# LOAD DATA
-# ======================
 @st.cache_data
 def load_data():
     df = pd.read_excel(FILE_NAME, skiprows=1)
-
     df.columns = df.columns.astype(str).str.strip().str.upper()
     df = df.loc[:, ~df.columns.str.contains("^UNNAMED")]
 
-    required_cols = [
-        "S.NO", "PART NO", "DESCRIPTION", "BOX NO",
-        "QTY", "LIFT NO", "CALL OUT", "DATE"
-    ]
+    required = ["S.NO", "PART NO", "DESCRIPTION", "BOX NO",
+                "QTY", "LIFT NO", "CALL OUT", "DATE"]
 
-    for c in required_cols:
+    for c in required:
         if c not in df.columns:
             df[c] = ""
 
     df["QTY"] = pd.to_numeric(df["QTY"], errors="coerce").fillna(0).astype(int)
-
-    return df[required_cols]
+    return df[required]
 
 df = load_data()
 
-# ======================
-# SEARCH
-# ======================
+# 🔍 SEARCH
 search = st.text_input("🔍 Search Part No or Description")
-
-filtered_df = df.copy()
 if search:
-    filtered_df = filtered_df[
-        filtered_df["PART NO"].astype(str).str.contains(search, case=False, na=False)
-        | filtered_df["DESCRIPTION"].astype(str).str.contains(search, case=False, na=False)
+    df_view = df[
+        df["PART NO"].astype(str).str.contains(search, case=False, na=False)
+        | df["DESCRIPTION"].astype(str).str.contains(search, case=False, na=False)
     ]
+else:
+    df_view = df.copy()
 
-# ======================
-# DATA EDITOR
-# ======================
+# ✏️ EDITOR
 edited_df = st.data_editor(
-    filtered_df,
+    df_view,
     disabled=["S.NO", "PART NO", "DESCRIPTION", "BOX NO"],
     hide_index=True,
     use_container_width=True
 )
 
-# ======================
-# SAVE (SAFE & CORRECT)
-# ======================
+# 💾 SAVE
 if st.button("💾 SAVE"):
     editable_cols = ["QTY", "LIFT NO", "CALL OUT", "DATE"]
 
-    # Use S.NO as key
-    df.set_index("S.NO", inplace=True)
-    edited_df.set_index("S.NO", inplace=True)
+    df_idx = df.set_index("S.NO")
+    edited_idx = edited_df.set_index("S.NO")
 
     changes = 0
-
-    for sno in edited_df.index:
+    for sno in edited_idx.index:
         for col in editable_cols:
-            if df.loc[sno, col] != edited_df.loc[sno, col]:
-                df.loc[sno, col] = edited_df.loc[sno, col]
+            if df_idx.loc[sno, col] != edited_idx.loc[sno, col]:
+                df_idx.loc[sno, col] = edited_idx.loc[sno, col]
                 changes += 1
 
-    df.reset_index(inplace=True)
+    df_final = df_idx.reset_index()
+    df_final.to_excel(FILE_NAME, index=False)
 
-    if changes == 0:
-        st.info("No changes detected")
-    else:
-        df.to_excel(FILE_NAME, index=False)
-        st.success(f"Saved {changes} change(s) successfully")
-
-# ======================
-# DEBUG
-# ======================
-with st.expander("🛠 Debug"):
-    st.write("Columns:", df.columns.tolist())
-
+    st.success(f"Saved {changes} change(s)")
 
 
 
