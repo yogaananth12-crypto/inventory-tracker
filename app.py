@@ -54,7 +54,7 @@ if st.button("💾 Save QTY"):
             "qty": int(row["QTY"])
         })
 
-     st.spinner("Saving changes..."):
+     st.spinner("Saving changes...")
         response = requests.post(
             SAVE_URL,
             data=json.dumps(updates),
