@@ -1,3 +1,4 @@
+import requests
 import json
 import streamlit as st
 import pandas as pd
@@ -53,10 +54,10 @@ if st.button("💾 Save QTY"):
             "qty": int(row["QTY"])
         })
 
-       st.spinner("Saving changes..."):
+     st.spinner("Saving changes..."):
         response = requests.post(
             SAVE_URL,
-            data=json.dumps(updates),          # 👈 IMPORTANT
+            data=json.dumps(updates),
             headers={"Content-Type": "application/json"},
             timeout=20
         )
@@ -65,7 +66,8 @@ if st.button("💾 Save QTY"):
         st.success("✅ Saved successfully!")
         st.rerun()
     else:
-        st.error("❌ Save failed")
+        st.error("❌ Save failed. Check Apps Script.")
+
 
 
 # ================= FOOTER =================
