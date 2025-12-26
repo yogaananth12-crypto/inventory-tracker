@@ -3,15 +3,18 @@ import pandas as pd
 import requests
 
 # =========================
-# CONFIG
+# PAGE CONFIG
 # =========================
 st.set_page_config(page_title="Spare Parts Inventory", layout="wide")
+st.title("🔧 Spare Parts Inventory")
 
+# =========================
+# CONFIG – CHANGE THESE
+# =========================
 SHEET_ID = "1PY9T5x0sqaDnHTZ5RoDx3LYGBu8bqOT7j4itdlC9yuE"
 SHEET_CSV_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv"
-SAVE_URL = "https://script.google.com/macros/s/AKfycbxbxaI09BnDc4mhpAlcnoaZ1Mrj_OVK16uMFuKCPea69N8ZNY0iXaWhc_Jjeq9QVxxriw/exec"
 
-st.title("🔧 Spare Parts Inventory")
+SAVE_URL = "https://script.google.com/macros/s/AKfycbx0WFr35KlCjlSgCwOJB0waE86knqMt__xDy1bNKolTVdxve6LV4bwR-E9PJe13K8u8Gw/exec"
 
 # =========================
 # LOAD DATA
@@ -20,24 +23,25 @@ st.title("🔧 Spare Parts Inventory")
 def load_data():
     df = pd.read_csv(SHEET_CSV_URL)
 
-    # Clean column names
+    # Clean headers
     df.columns = df.columns.astype(str).str.strip().str.upper()
 
     # Remove UNNAMED columns
     df = df.loc[:, ~df.columns.str.contains("^UNNAMED")]
 
-    # Ensure required columns
-    required = [
+    # Required columns
+    required_cols = [
         "S.NO", "PART NO", "DESCRIPTION", "BOX NO",
         "QTY", "LIFT NO", "CALL OUT", "DATE"
     ]
-    for col in required:
+
+    for col in required_cols:
         if col not in df.columns:
             df[col] = ""
 
     df["QTY"] = pd.to_numeric(df["QTY"], errors="coerce").fillna(0).astype(int)
 
-    return df[required]
+    return df[required_cols]
 
 
 df = load_data()
@@ -76,19 +80,20 @@ edited_df = st.data_editor(
 # =========================
 if st.button("💾 Save Changes"):
     with st.spinner("Saving changes..."):
+
         updates = []
 
         for _, row in edited_df.iterrows():
-            original_row = df[df["S.NO"] == row["S.NO"]].iloc[0]
+            original = df[df["S.NO"] == row["S.NO"]].iloc[0]
 
             if (
-                row["QTY"] != original_row["QTY"]
-                or row["LIFT NO"] != original_row["LIFT NO"]
-                or row["CALL OUT"] != original_row["CALL OUT"]
-                or row["DATE"] != original_row["DATE"]
+                row["QTY"] != original["QTY"]
+                or row["LIFT NO"] != original["LIFT NO"]
+                or row["CALL OUT"] != original["CALL OUT"]
+                or row["DATE"] != original["DATE"]
             ):
                 updates.append({
-                    "sno": row["S.NO"],
+                    "sno": str(row["S.NO"]),
                     "qty": int(row["QTY"]),
                     "lift_no": str(row["LIFT NO"]),
                     "call_out": str(row["CALL OUT"]),
@@ -98,18 +103,18 @@ if st.button("💾 Save Changes"):
         if not updates:
             st.info("No changes to save.")
         else:
-            r = requests.post(
-                SAVE_URL,
-                json={"updates": updates},
-                timeout=20
-            )
+            payload = {"updates": updates}
 
-            if r.status_code == 200 and r.text.strip() == "OK":
+            r = requests.post(SAVE_URL, json=payload, timeout=20)
+
+            if r.status_code == 200:
                 st.success("✅ Saved successfully")
                 st.cache_data.clear()
                 st.rerun()
             else:
-                st.error("❌ Save failed. Check Apps Script.")
+                st.error(f"❌ Save failed (Status {r.status_code})")
+                st.write(r.text)
+
 
 
 
