@@ -44,6 +44,7 @@ def safe(val):
     if isinstance(val, float) and math.isnan(val):
         return ""
     return str(val)
+import json
 
 if st.button("💾 Save Changes"):
     payload = []
@@ -51,14 +52,22 @@ if st.button("💾 Save Changes"):
     for _, row in edited_df.iterrows():
         payload.append({
             "row": int(row["__ROW__"]),
-            "qty": int(row["QTY"]),
-            "lift_no": safe(row["LIFT NO"]),
-            "call_out": safe(row["CALL OUT"]),
-            "date": safe(row["DATE"]),
+            "qty": int(row["QTY"]) if row["QTY"] is not None else 0,
+            "lift_no": "" if pd.isna(row["LIFT NO"]) else str(row["LIFT NO"]),
+            "call_out": "" if pd.isna(row["CALL OUT"]) else str(row["CALL OUT"]),
+            "date": "" if pd.isna(row["DATE"]) else str(row["DATE"]),
         })
 
+    # 🔥 FORCE JSON SERIALIZATION HERE
+    payload = json.loads(json.dumps(payload))
+
     with st.spinner("Saving to Google Sheet..."):
-        r = requests.post(SAVE_URL, json=payload, timeout=20)
+        r = requests.post(
+            SAVE_URL,
+            data=json.dumps(payload),   # <-- IMPORTANT
+            headers={"Content-Type": "application/json"},
+            timeout=20
+        )
 
     if r.status_code == 200:
         st.success("✅ All rows saved accurately (100%)")
@@ -66,6 +75,8 @@ if st.button("💾 Save Changes"):
         st.rerun()
     else:
         st.error("❌ Save failed")
+
+
 
 
 
