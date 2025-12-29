@@ -2,47 +2,33 @@ import streamlit as st
 import pandas as pd
 import gspread
 from google.oauth2.service_account import Credentials
-from datetime import datetime
 
 # ================= PAGE CONFIG =================
-st.set_page_config(page_title="KONE Inventory", layout="wide")
-
-# ================= STYLE =================
-st.markdown("""
-<style>
-.block-container { padding-top: 1rem; padding-bottom: 6rem; }
-.header { text-align:center; margin-bottom:12px; }
-.logo { display:flex; justify-content:center; gap:6px; }
-.box {
-    width:46px; height:46px;
-    background:#1f4bff; color:white;
-    font-size:26px; font-weight:900;
-    display:flex; align-items:center; justify-content:center;
-    border-radius:4px;
-}
-.subtitle { font-weight:600; color:#444; }
-.date { font-size:12px; color:#777; }
-.save { position:fixed; bottom:14px; right:14px; }
-.save button {
-    background:#1f4bff !important;
-    color:white !important;
-    border-radius:50px !important;
-    padding:12px 22px !important;
-    font-weight:700 !important;
-}
-</style>
-""", unsafe_allow_html=True)
+st.set_page_config(
+    page_title="KONE Inventory",
+    layout="wide"
+)
 
 # ================= HEADER =================
-today = datetime.now().strftime("%d %b %Y")
-st.markdown(f"""
-<div class="header">
-  <div class="logo">
-    <div class="box">K</div><div class="box">O</div>
-    <div class="box">N</div><div class="box">E</div>
+st.markdown("""
+<div style="text-align:center;margin-bottom:10px">
+  <div style="display:flex;justify-content:center;gap:6px">
+    <div style="width:50px;height:50px;background:#005EB8;color:white;
+                font-size:30px;font-weight:900;display:flex;
+                align-items:center;justify-content:center;border-radius:6px;">K</div>
+    <div style="width:50px;height:50px;background:#005EB8;color:white;
+                font-size:30px;font-weight:900;display:flex;
+                align-items:center;justify-content:center;border-radius:6px;">O</div>
+    <div style="width:50px;height:50px;background:#005EB8;color:white;
+                font-size:30px;font-weight:900;display:flex;
+                align-items:center;justify-content:center;border-radius:6px;">N</div>
+    <div style="width:50px;height:50px;background:#005EB8;color:white;
+                font-size:30px;font-weight:900;display:flex;
+                align-items:center;justify-content:center;border-radius:6px;">E</div>
   </div>
-  <div class="subtitle">Lift Inventory Tracker</div>
-  <div class="date">{today}</div>
+  <div style="font-size:18px;font-weight:700;margin-top:4px">
+    Spare Parts Inventory
+  </div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -55,77 +41,102 @@ EDITABLE_COLS = ["QTY", "LIFT NO", "CALL OUT", "DATE"]
 # ================= AUTH =================
 scopes = [
     "https://www.googleapis.com/auth/spreadsheets",
-    "https://www.googleapis.com/auth/drive",
+    "https://www.googleapis.com/auth/drive"
 ]
+
 creds = Credentials.from_service_account_info(
-    st.secrets["gcp_service_account"], scopes=scopes
+    st.secrets["gcp_service_account"],
+    scopes=scopes
 )
+
 client = gspread.authorize(creds)
 sheet = client.open_by_key(SHEET_ID).worksheet(SHEET_NAME)
 
 # ================= LOAD DATA =================
-df = pd.DataFrame(sheet.get_all_records())
+records = sheet.get_all_records()
+df = pd.DataFrame(records)
+
 if df.empty:
+    st.error("Google Sheet is empty")
     st.stop()
 
-# Force STRING (CRITICAL)
+# Ensure editable columns exist
 for col in EDITABLE_COLS:
     if col not in df.columns:
         df[col] = ""
-    df[col] = df[col].astype(str)
 
-# Keep row index
+# Convert types (IMPORTANT)
+df["QTY"] = pd.to_numeric(df["QTY"], errors="coerce").fillna(0).astype(int)
+df["LIFT NO"] = df["LIFT NO"].astype(str)
+df["CALL OUT"] = df["CALL OUT"].astype(str)
+df["DATE"] = df["DATE"].astype(str)
+
+# Add stable Google Sheet row index
 df["_ROW"] = range(2, len(df) + 2)
 
 # ================= SEARCH =================
-search = st.text_input("🔍 Search")
-if search:
-    df = df[df.apply(lambda r: search.lower() in str(r).lower(), axis=1)]
+search = st.text_input("🔍 Search Part No / Description")
 
-# ================= SHOW ONLY EDITABLE =================
-display_df = df[EDITABLE_COLS + ["_ROW"]]
+view_df = df.copy()
+if search:
+    view_df = view_df[
+        view_df.apply(lambda r: search.lower() in str(r).lower(), axis=1)
+    ]
 
 # ================= DATA EDITOR =================
-edited = st.data_editor(
-    display_df,
-    hide_index=True,
+edited_df = st.data_editor(
+    view_df,
     use_container_width=True,
+    hide_index=True,
     column_config={
-        "QTY": st.column_config.NumberColumn("QTY", step=1),
+        "QTY": st.column_config.NumberColumn("QTY", min_value=0),
         "LIFT NO": st.column_config.TextColumn("LIFT NO"),
         "CALL OUT": st.column_config.TextColumn("CALL OUT"),
         "DATE": st.column_config.TextColumn("DATE"),
-        "_ROW": None,
+        "_ROW": None
     },
-    key="editor",
+    key="editor"
 )
 
-# ================= SAVE =================
-st.markdown('<div class="save">', unsafe_allow_html=True)
-save = st.button("💾 Save")
-st.markdown('</div>', unsafe_allow_html=True)
+# ================= SAVE BUTTON =================
+st.markdown(
+    "<div style='position:fixed;bottom:20px;right:20px'>",
+    unsafe_allow_html=True
+)
 
-if save:
+if st.button("💾 Save Changes", use_container_width=True):
     updated = 0
-    for _, row in edited.iterrows():
+
+    for _, row in edited_df.iterrows():
         row_no = int(row["_ROW"])
         original = df[df["_ROW"] == row_no].iloc[0]
 
-        values, changed = [], False
+        values = []
+        changed = False
+
         for col in df.columns:
             if col == "_ROW":
                 continue
-            new = "" if pd.isna(row.get(col, "")) else str(row.get(col, ""))
-            old = "" if pd.isna(original[col]) else str(original[col])
-            if new != old:
+
+            new_val = "" if pd.isna(row[col]) else str(row[col])
+            old_val = "" if pd.isna(original[col]) else str(original[col])
+
+            if new_val != old_val:
                 changed = True
-            values.append(new)
+
+            values.append(new_val)
 
         if changed:
             sheet.update(f"A{row_no}", [values])
             updated += 1
 
-    st.success(f"✅ {updated} row(s) saved")
+    if updated:
+        st.success(f"✅ {updated} row(s) saved to Google Sheet")
+    else:
+        st.info("No changes detected")
+
+st.markdown("</div>", unsafe_allow_html=True)
+
 
 
 
