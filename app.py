@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import gspread
 from google.oauth2.service_account import Credentials
-from datetime import date
 
 st.set_page_config(page_title="Inventory Tracker", layout="wide")
 
@@ -40,24 +39,24 @@ client = gspread.authorize(creds)
 sheet = client.open_by_url(SHEET_URL).sheet1
 
 # =========================
-# LOAD DATA
+# LOAD ONCE
 # =========================
-df = pd.DataFrame(sheet.get_all_records())
+if "df" not in st.session_state:
+    df = pd.DataFrame(sheet.get_all_records())
+    df.columns = df.columns.astype(str).str.strip().str.upper()
 
-df.columns = df.columns.astype(str).str.strip().str.upper()
+    for col in COLUMNS:
+        if col not in df.columns:
+            df[col] = ""
 
-# Ensure columns exist
-for col in COLUMNS:
-    if col not in df.columns:
-        df[col] = ""
+    df = df[COLUMNS]
 
-df = df[COLUMNS]
+    df["QTY"] = pd.to_numeric(df["QTY"], errors="coerce").fillna(0).astype(int)
+    df["LIFT NO"] = df["LIFT NO"].astype(str)
+    df["CALL OUT"] = df["CALL OUT"].astype(str)
+    df["DATE"] = df["DATE"].astype(str)
 
-# Force correct dtypes
-df["QTY"] = pd.to_numeric(df["QTY"], errors="coerce").fillna(0).astype(int)
-df["LIFT NO"] = df["LIFT NO"].astype(str)
-df["CALL OUT"] = df["CALL OUT"].astype(str)
-df["DATE"] = pd.to_datetime(df["DATE"], errors="coerce")
+    st.session_state.df = df
 
 st.title("📦 Spare Parts Inventory")
 
@@ -66,20 +65,23 @@ st.title("📦 Spare Parts Inventory")
 # =========================
 search = st.text_input("🔍 Search Part No / Description")
 
+view_df = st.session_state.df.copy()
+
 if search:
-    df = df[
-        df["PART NO"].str.contains(search, case=False, na=False) |
-        df["DESCRIPTION"].str.contains(search, case=False, na=False)
+    view_df = view_df[
+        view_df["PART NO"].str.contains(search, case=False, na=False) |
+        view_df["DESCRIPTION"].str.contains(search, case=False, na=False)
     ]
 
 # =========================
-# DATA EDITOR
+# EDITOR (STABLE)
 # =========================
 edited_df = st.data_editor(
-    df,
+    view_df,
     use_container_width=True,
     num_rows="fixed",
     disabled=[c for c in COLUMNS if c not in EDITABLE],
+    key="inventory_editor",
     column_config={
         "QTY": st.column_config.NumberColumn("QTY", min_value=0),
         "LIFT NO": st.column_config.TextColumn("LIFT NO"),
@@ -87,25 +89,30 @@ edited_df = st.data_editor(
             "CALL OUT",
             options=["", "YES", "NO"]
         ),
-        "DATE": st.column_config.DateColumn("DATE")
+        "DATE": st.column_config.TextColumn("DATE")
     }
 )
+
+# =========================
+# MERGE BACK
+# =========================
+st.session_state.df.update(edited_df)
 
 # =========================
 # SAVE
 # =========================
 if st.button("💾 Save Changes"):
     with st.spinner("Saving to Google Sheets..."):
-        save_df = edited_df.copy()
-        save_df["DATE"] = save_df["DATE"].astype(str)
+        save_df = st.session_state.df.copy().fillna("").astype(str)
 
         sheet.clear()
         sheet.update(
             [save_df.columns.tolist()] +
-            save_df.astype(str).values.tolist()
+            save_df.values.tolist()
         )
 
-    st.success("✅ Saved successfully. All users see updates.")
+    st.success("✅ Saved. Editable again immediately.")
+
 
 
 
