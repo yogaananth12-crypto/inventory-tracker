@@ -39,7 +39,7 @@ for col in EDITABLE_COLS:
     if col not in df.columns:
         df[col] = ""
 
-# Stable Google Sheet row number
+# Add Google Sheet row number
 df["_ROW"] = range(2, len(df) + 2)
 
 # ================= SEARCH =================
@@ -51,14 +51,18 @@ if search:
         df_view.apply(lambda r: search.lower() in str(r).lower(), axis=1)
     ]
 
-# ================= COLUMN CONFIG (CRITICAL) =================
-column_config = {
-    "QTY": st.column_config.NumberColumn("QTY", step=1),
-    "LIFT NO": st.column_config.TextColumn("LIFT NO"),
-    "CALL OUT": st.column_config.TextColumn("CALL OUT"),
-    "DATE": st.column_config.TextColumn("DATE"),
-    "_ROW": st.column_config.Column(disabled=True),
-}
+# ================= COLUMN CONFIG (ONLY WAY) =================
+column_config = {}
+
+for col in df_view.columns:
+    if col == "QTY":
+        column_config[col] = st.column_config.NumberColumn(col)
+    elif col in ["LIFT NO", "CALL OUT", "DATE"]:
+        column_config[col] = st.column_config.TextColumn(col)
+    else:
+        column_config[col] = st.column_config.Column(
+            col, disabled=True
+        )
 
 # ================= DATA EDITOR =================
 edited_df = st.data_editor(
@@ -66,7 +70,6 @@ edited_df = st.data_editor(
     use_container_width=True,
     hide_index=True,
     column_config=column_config,
-    disabled=[c for c in df_view.columns if c not in EDITABLE_COLS],
     key="editor",
 )
 
@@ -98,10 +101,11 @@ if st.button("💾 Save Changes"):
             updated += 1
 
     if updated:
-        st.success(f"✅ {updated} row(s) updated in Google Sheet")
+        st.success(f"✅ {updated} row(s) saved")
         st.rerun()
     else:
-        st.info("No changes to save")
+        st.info("No changes detected")
+
 
 
 
