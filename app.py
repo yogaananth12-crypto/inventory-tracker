@@ -2,10 +2,115 @@ import streamlit as st
 import pandas as pd
 import gspread
 from google.oauth2.service_account import Credentials
-from datetime import date
+from datetime import datetime
 
 # ================= PAGE CONFIG =================
-st.set_page_config(page_title="Inventory Tracker", layout="wide")
+st.set_page_config(
+    page_title="KONE Inventory",
+    layout="wide",
+)
+
+# ================= GLOBAL STYLES =================
+st.markdown("""
+<style>
+/* Mobile padding fix */
+.block-container {
+    padding-top: 1rem;
+    padding-bottom: 6rem;
+}
+
+/* Header */
+.kone-header {
+    text-align: center;
+    padding: 14px 0 12px 0;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+/* Logo */
+.kone-logo {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+}
+
+/* Logo boxes */
+.kone-box {
+    width: 48px;
+    height: 48px;
+    background: #1f4bff;
+    color: white;
+    font-size: 28px;
+    font-weight: 900;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Subtitle */
+.kone-subtitle {
+    font-size: 15px;
+    font-weight: 600;
+    color: #444;
+    margin-top: 6px;
+}
+
+/* Date */
+.kone-date {
+    font-size: 12px;
+    color: #777;
+}
+
+/* Floating Save Button */
+.floating-save {
+    position: fixed;
+    bottom: 14px;
+    right: 14px;
+    z-index: 9999;
+}
+
+.floating-save button {
+    background-color: #1f4bff !important;
+    color: white !important;
+    border-radius: 50px !important;
+    padding: 12px 20px !important;
+    font-weight: 700 !important;
+}
+
+/* Table theme */
+thead tr th {
+    background-color: #f3f6ff !important;
+}
+
+/* Mobile logo scaling */
+@media (max-width: 640px) {
+    .kone-box {
+        width: 40px;
+        height: 40px;
+        font-size: 24px;
+    }
+}
+</style>
+""", unsafe_allow_html=True)
+
+# ================= HEADER =================
+today = datetime.now().strftime("%d %b %Y")
+
+st.markdown(f"""
+<div class="kone-header">
+    <div class="kone-logo">
+        <div class="kone-box">K</div>
+        <div class="kone-box">O</div>
+        <div class="kone-box">N</div>
+        <div class="kone-box">E</div>
+    </div>
+    <div class="kone-subtitle">Lift Inventory Tracker</div>
+    <div class="kone-date">{today}</div>
+</div>
+""", unsafe_allow_html=True)
+
+st.markdown("")
 
 # ================= CONFIG =================
 SHEET_ID = "1PY9T5x0sqaDnHTZ5RoDx3LYGBu8bqOT7j4itdlC9yuE"
@@ -35,21 +140,14 @@ if df.empty:
     st.error("Google Sheet is empty")
     st.stop()
 
-# Ensure editable columns
 for col in EDITABLE_COLS:
     if col not in df.columns:
         df[col] = ""
 
-# Sheet row number
 df["_ROW"] = range(2, len(df) + 2)
 
-# Type safety
-df["QTY"] = pd.to_numeric(df["QTY"], errors="coerce").fillna(0).astype(int)
-df["CALL OUT"] = pd.to_numeric(df["CALL OUT"], errors="coerce").fillna(0).astype(int)
-df["DATE"] = pd.to_datetime(df["DATE"], errors="coerce").dt.date
-
 # ================= SEARCH =================
-search = st.text_input("🔍 Search")
+search = st.text_input("🔍 Search", placeholder="Search part no, lift no, etc.")
 
 df_view = df.copy()
 if search:
@@ -57,133 +155,58 @@ if search:
         df_view.apply(lambda r: search.lower() in str(r).lower(), axis=1)
     ]
 
-# ================= MOBILE DETECTION =================
-st.markdown(
-    """
-    <script>
-    const isMobile = window.innerWidth < 768;
-    window.parent.postMessage(
-        { type: "streamlit:setSessionState", key: "is_mobile", value: isMobile },
-        "*"
-    );
-    </script>
-    """,
-    unsafe_allow_html=True,
+# ================= DATA EDITOR =================
+edited_df = st.data_editor(
+    df_view,
+    use_container_width=True,
+    hide_index=True,
+    disabled=[c for c in df_view.columns if c not in EDITABLE_COLS],
+    column_config={
+        "QTY": st.column_config.NumberColumn("QTY", step=1),
+        "LIFT NO": st.column_config.NumberColumn("LIFT NO", step=1),
+        "CALL OUT": st.column_config.NumberColumn("CALL OUT", step=1),
+        "DATE": st.column_config.TextColumn("DATE"),
+        "_ROW": None,
+    },
+    key="editor",
 )
 
-is_mobile = st.session_state.get("is_mobile", False)
+# ================= FLOATING SAVE =================
+st.markdown('<div class="floating-save">', unsafe_allow_html=True)
+save_clicked = st.button("💾 Save")
+st.markdown('</div>', unsafe_allow_html=True)
 
-# ================= DESKTOP =================
-if not is_mobile:
-    st.subheader("🖥 Desktop Editor")
+if save_clicked:
+    updated = 0
 
-    edited = st.data_editor(
-        df_view,
-        hide_index=True,
-        use_container_width=True,
-        disabled=[c for c in df_view.columns if c not in EDITABLE_COLS],
-        column_config={
-            "QTY": st.column_config.NumberColumn(min_value=0),
-            "CALL OUT": st.column_config.NumberColumn(min_value=0),
-            "DATE": st.column_config.DateColumn(),
-        },
-        key="desktop_editor",
-    )
+    for _, row in edited_df.iterrows():
+        row_no = int(row["_ROW"])
+        original = df[df["_ROW"] == row_no].iloc[0]
 
-    if st.button("💾 Save All Changes"):
-        updates = 0
+        values = []
+        changed = False
 
-        for _, row in edited.iterrows():
-            row_no = int(row["_ROW"])
-            original = df[df["_ROW"] == row_no].iloc[0]
+        for col in df.columns:
+            if col == "_ROW":
+                continue
 
-            values = []
-            changed = False
+            new_val = "" if pd.isna(row[col]) else str(row[col])
+            old_val = "" if pd.isna(original[col]) else str(original[col])
 
-            for col in df.columns:
-                if col == "_ROW":
-                    continue
+            if new_val != old_val:
+                changed = True
 
-                new = row[col]
-                old = original[col]
+            values.append(new_val)
 
-                if pd.isna(new):
-                    new = ""
+        if changed:
+            sheet.update(f"A{row_no}", [values])
+            updated += 1
 
-                if isinstance(new, date):
-                    new = new.strftime("%Y-%m-%d")
+    if updated:
+        st.success(f"✅ {updated} row(s) saved")
+    else:
+        st.info("No changes detected")
 
-                if str(new) != str(old):
-                    changed = True
-
-                values.append(str(new))
-
-            if changed:
-                sheet.update(f"A{row_no}", [values])
-                updates += 1
-
-        st.success(f"✅ {updates} row(s) updated")
-
-# ================= MOBILE UI (IMPROVED) =================
-else:
-    st.subheader("📱 Mobile Inventory")
-
-    for idx, row in df_view.iterrows():
-        with st.container():
-            st.markdown(
-                f"""
-                <div style="border-radius:12px;padding:14px;margin-bottom:14px;
-                background:#111; border:1px solid #333;">
-                <b>{row[df_view.columns[0]]}</b>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-
-            with st.form(f"row_{row['_ROW']}"):
-                qty = st.number_input(
-                    "QTY", value=row["QTY"], min_value=0, key=f"q_{idx}"
-                )
-
-                lift = st.text_input(
-                    "LIFT NO", value=str(row["LIFT NO"]), key=f"l_{idx}"
-                )
-
-                callout = st.number_input(
-                    "CALL OUT",
-                    value=row["CALL OUT"],
-                    min_value=0,
-                    key=f"c_{idx}",
-                )
-
-                d = st.date_input(
-                    "DATE",
-                    value=row["DATE"] if row["DATE"] else date.today(),
-                    key=f"d_{idx}",
-                )
-
-                save = st.form_submit_button("💾 Save")
-
-                if save:
-                    values = []
-
-                    for col in df.columns:
-                        if col == "_ROW":
-                            continue
-
-                        if col == "QTY":
-                            values.append(str(qty))
-                        elif col == "LIFT NO":
-                            values.append(lift)
-                        elif col == "CALL OUT":
-                            values.append(str(callout))
-                        elif col == "DATE":
-                            values.append(d.strftime("%Y-%m-%d"))
-                        else:
-                            values.append(str(row[col]))
-
-                    sheet.update(f"A{int(row['_ROW'])}", [values])
-                    st.success("✅ Updated")
 
 
 
