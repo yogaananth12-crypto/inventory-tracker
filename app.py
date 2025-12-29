@@ -35,15 +35,15 @@ if df.empty:
     st.error("Google Sheet is empty")
     st.stop()
 
-# Ensure editable columns exist
+# Ensure editable columns
 for col in EDITABLE_COLS:
     if col not in df.columns:
         df[col] = ""
 
-# Google Sheet row number
+# Sheet row number
 df["_ROW"] = range(2, len(df) + 2)
 
-# Convert types safely
+# Type safety
 df["QTY"] = pd.to_numeric(df["QTY"], errors="coerce").fillna(0).astype(int)
 df["CALL OUT"] = pd.to_numeric(df["CALL OUT"], errors="coerce").fillna(0).astype(int)
 df["DATE"] = pd.to_datetime(df["DATE"], errors="coerce").dt.date
@@ -57,9 +57,7 @@ if search:
         df_view.apply(lambda r: search.lower() in str(r).lower(), axis=1)
     ]
 
-# ================= DEVICE CHECK =================
-is_mobile = st.session_state.get("is_mobile", False)
-
+# ================= MOBILE DETECTION =================
 st.markdown(
     """
     <script>
@@ -73,27 +71,29 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# ================= DESKTOP VIEW =================
+is_mobile = st.session_state.get("is_mobile", False)
+
+# ================= DESKTOP =================
 if not is_mobile:
     st.subheader("🖥 Desktop Editor")
 
-    edited_df = st.data_editor(
+    edited = st.data_editor(
         df_view,
         hide_index=True,
         use_container_width=True,
-        key="editor",
         disabled=[c for c in df_view.columns if c not in EDITABLE_COLS],
         column_config={
             "QTY": st.column_config.NumberColumn(min_value=0),
             "CALL OUT": st.column_config.NumberColumn(min_value=0),
             "DATE": st.column_config.DateColumn(),
         },
+        key="desktop_editor",
     )
 
-    if st.button("💾 Save Changes"):
+    if st.button("💾 Save All Changes"):
         updates = 0
 
-        for _, row in edited_df.iterrows():
+        for _, row in edited.iterrows():
             row_no = int(row["_ROW"])
             original = df[df["_ROW"] == row_no].iloc[0]
 
@@ -104,19 +104,19 @@ if not is_mobile:
                 if col == "_ROW":
                     continue
 
-                new_val = row[col]
-                old_val = original[col]
+                new = row[col]
+                old = original[col]
 
-                if pd.isna(new_val):
-                    new_val = ""
+                if pd.isna(new):
+                    new = ""
 
-                if isinstance(new_val, date):
-                    new_val = new_val.strftime("%Y-%m-%d")
+                if isinstance(new, date):
+                    new = new.strftime("%Y-%m-%d")
 
-                if str(new_val) != str(old_val):
+                if str(new) != str(old):
                     changed = True
 
-                values.append(str(new_val))
+                values.append(str(new))
 
             if changed:
                 sheet.update(f"A{row_no}", [values])
@@ -124,47 +124,66 @@ if not is_mobile:
 
         st.success(f"✅ {updates} row(s) updated")
 
-# ================= MOBILE VIEW =================
+# ================= MOBILE UI (IMPROVED) =================
 else:
-    st.subheader("📱 Mobile Editor")
+    st.subheader("📱 Mobile Inventory")
 
-    row_index = st.selectbox(
-        "Select Row",
-        df_view.index,
-        format_func=lambda i: f"{df_view.loc[i, df_view.columns[0]]}",
-    )
+    for idx, row in df_view.iterrows():
+        with st.container():
+            st.markdown(
+                f"""
+                <div style="border-radius:12px;padding:14px;margin-bottom:14px;
+                background:#111; border:1px solid #333;">
+                <b>{row[df_view.columns[0]]}</b>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
 
-    row = df_view.loc[row_index]
+            with st.form(f"row_{row['_ROW']}"):
+                qty = st.number_input(
+                    "QTY", value=row["QTY"], min_value=0, key=f"q_{idx}"
+                )
 
-    with st.form("mobile_form"):
-        qty = st.number_input("QTY", value=int(row["QTY"]), min_value=0)
-        lift = st.text_input("LIFT NO", value=str(row["LIFT NO"]))
-        callout = st.number_input("CALL OUT", value=int(row["CALL OUT"]), min_value=0)
-        date_val = st.date_input("DATE", value=row["DATE"] or date.today())
+                lift = st.text_input(
+                    "LIFT NO", value=str(row["LIFT NO"]), key=f"l_{idx}"
+                )
 
-        save = st.form_submit_button("💾 Save")
+                callout = st.number_input(
+                    "CALL OUT",
+                    value=row["CALL OUT"],
+                    min_value=0,
+                    key=f"c_{idx}",
+                )
 
-        if save:
-            row_no = int(row["_ROW"])
-            values = []
+                d = st.date_input(
+                    "DATE",
+                    value=row["DATE"] if row["DATE"] else date.today(),
+                    key=f"d_{idx}",
+                )
 
-            for col in df.columns:
-                if col == "_ROW":
-                    continue
+                save = st.form_submit_button("💾 Save")
 
-                if col == "QTY":
-                    values.append(str(qty))
-                elif col == "LIFT NO":
-                    values.append(lift)
-                elif col == "CALL OUT":
-                    values.append(str(callout))
-                elif col == "DATE":
-                    values.append(date_val.strftime("%Y-%m-%d"))
-                else:
-                    values.append(str(row[col]))
+                if save:
+                    values = []
 
-            sheet.update(f"A{row_no}", [values])
-            st.success("✅ Row updated successfully")
+                    for col in df.columns:
+                        if col == "_ROW":
+                            continue
+
+                        if col == "QTY":
+                            values.append(str(qty))
+                        elif col == "LIFT NO":
+                            values.append(lift)
+                        elif col == "CALL OUT":
+                            values.append(str(callout))
+                        elif col == "DATE":
+                            values.append(d.strftime("%Y-%m-%d"))
+                        else:
+                            values.append(str(row[col]))
+
+                    sheet.update(f"A{int(row['_ROW'])}", [values])
+                    st.success("✅ Updated")
 
 
 
