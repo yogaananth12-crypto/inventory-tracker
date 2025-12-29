@@ -30,7 +30,7 @@ records = sheet.get_all_records()
 df = pd.DataFrame(records)
 
 if df.empty:
-    st.error("Google Sheet is empty")
+    st.error("Sheet is empty")
     st.stop()
 
 # Ensure editable columns exist
@@ -38,15 +38,15 @@ for col in EDITABLE_COLS:
     if col not in df.columns:
         df[col] = ""
 
-# Add sheet row number
+# Add row number for updates
 df["_ROW_"] = range(2, len(df) + 2)
 
-# 🔴 CRITICAL FIX: FORCE EVERYTHING TO STRING
+# FORCE ALL TO STRING (critical)
 df = df.astype(str)
 
 # ================= SEARCH =================
 st.subheader("🔍 Search")
-search = st.text_input("Search any value")
+search = st.text_input("Search")
 
 df_view = df.copy()
 if search:
@@ -54,10 +54,10 @@ if search:
         df_view.apply(lambda r: search.lower() in " ".join(r).lower(), axis=1)
     ]
 
-# ================= DATA EDITOR =================
+# ================= EDITOR =================
 st.subheader("📋 Inventory")
 
-edited_df = st.data_editor(
+edited_df = st.experimental_data_editor(
     df_view,
     use_container_width=True,
     hide_index=True,
@@ -72,21 +72,20 @@ if st.button("💾 Save Changes"):
         row_no = int(row["_ROW_"])
         original = df[df["_ROW_"] == str(row_no)].iloc[0]
 
-        changed = False
         values = []
+        changed = False
 
         for col in df.columns:
             if col == "_ROW_":
                 continue
 
             if col in EDITABLE_COLS:
-                new_val = row[col].strip()
-                old_val = original[col].strip()
+                new = row[col].strip()
+                old = original[col].strip()
 
-                if new_val != old_val:
+                if new != old:
                     changed = True
-
-                values.append(new_val)
+                values.append(new)
             else:
                 values.append(original[col])
 
@@ -95,7 +94,7 @@ if st.button("💾 Save Changes"):
             updated += 1
 
     if updated:
-        st.success(f"✅ {updated} row(s) saved to Google Sheet")
+        st.success(f"✅ {updated} row(s) updated")
         st.experimental_rerun()
     else:
         st.info("No changes detected")
