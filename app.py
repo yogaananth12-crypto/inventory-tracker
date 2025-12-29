@@ -3,6 +3,7 @@ import pandas as pd
 import gspread
 from google.oauth2.service_account import Credentials
 
+# ================= PAGE CONFIG =================
 st.set_page_config(page_title="Inventory Tracker", layout="wide")
 
 # ================= CONFIG =================
@@ -26,80 +27,74 @@ client = gspread.authorize(creds)
 sheet = client.open_by_key(SHEET_ID).worksheet(SHEET_NAME)
 
 # ================= LOAD DATA =================
-records = sheet.get_all_records()
-df = pd.DataFrame(records)
+df = pd.DataFrame(sheet.get_all_records())
 
 if df.empty:
     st.error("Google Sheet is empty")
     st.stop()
 
-# Ensure editable columns exist
-for col in EDITABLE_COLS:
-    if col not in df.columns:
-        df[col] = ""
+# Ensure columns exist and correct types
+df["QTY"] = pd.to_numeric(df.get("QTY", 0), errors="coerce").fillna(0).astype(int)
+df["LIFT NO"] = df.get("LIFT NO", "").astype(str)
+df["CALL OUT"] = df.get("CALL OUT", "").astype(str)
+df["DATE"] = pd.to_datetime(df.get("DATE", ""), errors="coerce")
 
-# Add Google Sheet row number
-df["_ROW_"] = range(2, len(df) + 2)
+# Stable row index
+df["_ROW"] = range(2, len(df) + 2)
 
 # ================= SEARCH =================
-st.subheader("🔍 Search")
-search = st.text_input("Search any value")
+search = st.text_input("🔍 Search")
 
 df_view = df.copy()
 if search:
-    df_view = df_view[
-        df_view.astype(str)
-        .apply(lambda r: r.str.contains(search, case=False, na=False))
-        .any(axis=1)
-    ]
+    df_view = df_view[df_view.apply(lambda r: search.lower() in str(r).lower(), axis=1)]
 
 # ================= DATA EDITOR =================
-st.subheader("📋 Inventory (Editable)")
-
 edited_df = st.data_editor(
     df_view,
-    use_container_width=True,
     hide_index=True,
+    use_container_width=True,
+    column_config={
+        "QTY": st.column_config.NumberColumn("QTY", step=1),
+        "LIFT NO": st.column_config.TextColumn("LIFT NO"),
+        "CALL OUT": st.column_config.SelectboxColumn(
+            "CALL OUT", options=["YES", "NO"]
+        ),
+        "DATE": st.column_config.DateColumn("DATE"),
+    },
+    disabled=[c for c in df_view.columns if c not in EDITABLE_COLS],
     key="editor",
 )
 
 # ================= SAVE =================
 if st.button("💾 Save Changes"):
-    updated = 0
+    updates = 0
 
     for _, row in edited_df.iterrows():
-        row_no = int(row["_ROW_"])
-        original = df[df["_ROW_"] == row_no].iloc[0]
+        row_num = int(row["_ROW"])
+        original = df[df["_ROW"] == row_num].iloc[0]
 
         changed = False
-        updated_values = []
+        values = []
 
         for col in df.columns:
-            if col == "_ROW_":
+            if col == "_ROW":
                 continue
 
-            # 🔒 Only save allowed columns
-            if col in EDITABLE_COLS:
-                new_val = row[col]
-                old_val = original[col]
+            new = "" if pd.isna(row[col]) else str(row[col])
+            old = "" if pd.isna(original[col]) else str(original[col])
 
-                if pd.isna(new_val):
-                    new_val = ""
+            if new != old:
+                changed = True
 
-                if str(new_val) != str(old_val):
-                    changed = True
-
-                updated_values.append(new_val)
-            else:
-                updated_values.append(original[col])
+            values.append(new)
 
         if changed:
-            sheet.update(f"A{row_no}", [updated_values])
-            updated += 1
+            sheet.update(f"A{row_num}", [values])
+            updates += 1
 
-    if updated:
-        st.success(f"✅ {updated} row(s) saved to Google Sheet")
-        st.experimental_rerun()
+    if updates:
+        st.success(f"✅ {updates} row(s) saved to Google Sheet")
     else:
         st.info("No changes detected")
 
