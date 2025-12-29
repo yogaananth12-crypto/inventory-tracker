@@ -4,30 +4,27 @@ import gspread
 from google.oauth2.service_account import Credentials
 
 # ================= PAGE CONFIG =================
-st.set_page_config(
-    page_title="KONE Inventory",
-    layout="wide"
-)
+st.set_page_config(page_title="KONE Inventory", layout="wide")
 
 # ================= HEADER =================
 st.markdown("""
-<div style="text-align:center;margin-bottom:10px">
-  <div style="display:flex;justify-content:center;gap:6px">
-    <div style="width:50px;height:50px;background:#005EB8;color:white;
-                font-size:30px;font-weight:900;display:flex;
+<div style="text-align:center;margin-bottom:24px">
+  <div style="display:flex;justify-content:center;gap:8px">
+    <div style="width:52px;height:52px;background:#005EB8;color:white;
+                font-size:32px;font-weight:900;display:flex;
                 align-items:center;justify-content:center;border-radius:6px;">K</div>
-    <div style="width:50px;height:50px;background:#005EB8;color:white;
-                font-size:30px;font-weight:900;display:flex;
+    <div style="width:52px;height:52px;background:#005EB8;color:white;
+                font-size:32px;font-weight:900;display:flex;
                 align-items:center;justify-content:center;border-radius:6px;">O</div>
-    <div style="width:50px;height:50px;background:#005EB8;color:white;
-                font-size:30px;font-weight:900;display:flex;
+    <div style="width:52px;height:52px;background:#005EB8;color:white;
+                font-size:32px;font-weight:900;display:flex;
                 align-items:center;justify-content:center;border-radius:6px;">N</div>
-    <div style="width:50px;height:50px;background:#005EB8;color:white;
-                font-size:30px;font-weight:900;display:flex;
+    <div style="width:52px;height:52px;background:#005EB8;color:white;
+                font-size:32px;font-weight:900;display:flex;
                 align-items:center;justify-content:center;border-radius:6px;">E</div>
   </div>
-  <div style="font-size:18px;font-weight:700;margin-top:4px">
-    Spare Parts Inventory
+  <div style="font-size:18px;font-weight:700;margin-top:6px">
+    Lift Inventory Tracker
   </div>
 </div>
 """, unsafe_allow_html=True)
@@ -60,22 +57,22 @@ if df.empty:
     st.error("Google Sheet is empty")
     st.stop()
 
-# Ensure editable columns exist
-for col in EDITABLE_COLS:
-    if col not in df.columns:
-        df[col] = ""
+# ================= FORCE TYPES =================
+df["QTY"] = pd.to_numeric(df.get("QTY", 0), errors="coerce").fillna(0).astype(int)
+df["LIFT NO"] = df.get("LIFT NO", "").astype(str)
+df["CALL OUT"] = df.get("CALL OUT", "").astype(str)
+df["DATE"] = df.get("DATE", "").astype(str)
 
-# Convert types (IMPORTANT)
-df["QTY"] = pd.to_numeric(df["QTY"], errors="coerce").fillna(0).astype(int)
-df["LIFT NO"] = df["LIFT NO"].astype(str)
-df["CALL OUT"] = df["CALL OUT"].astype(str)
-df["DATE"] = df["DATE"].astype(str)
+# Read-only columns (force string to prevent editor issues)
+for col in ["PART NO", "DESCRIPTION", "BOX NO"]:
+    if col in df.columns:
+        df[col] = df[col].astype(str)
 
-# Add stable Google Sheet row index
+# Stable row reference
 df["_ROW"] = range(2, len(df) + 2)
 
 # ================= SEARCH =================
-search = st.text_input("🔍 Search Part No / Description")
+search = st.text_input("🔍 Search (Part No / Description / Lift No)")
 
 view_df = df.copy()
 if search:
@@ -86,26 +83,28 @@ if search:
 # ================= DATA EDITOR =================
 edited_df = st.data_editor(
     view_df,
-    use_container_width=True,
     hide_index=True,
+    use_container_width=True,
     column_config={
+        "PART NO": st.column_config.TextColumn("PART NO", disabled=True),
+        "DESCRIPTION": st.column_config.TextColumn(
+            "DESCRIPTION", width="large", disabled=True
+        ),
+        "BOX NO": st.column_config.TextColumn("BOX NO", disabled=True),
+
         "QTY": st.column_config.NumberColumn("QTY", min_value=0),
         "LIFT NO": st.column_config.TextColumn("LIFT NO"),
         "CALL OUT": st.column_config.TextColumn("CALL OUT"),
         "DATE": st.column_config.TextColumn("DATE"),
+
         "_ROW": None
     },
     key="editor"
 )
 
-# ================= SAVE BUTTON =================
-st.markdown(
-    "<div style='position:fixed;bottom:20px;right:20px'>",
-    unsafe_allow_html=True
-)
-
+# ================= SAVE =================
 if st.button("💾 Save Changes", use_container_width=True):
-    updated = 0
+    updates = 0
 
     for _, row in edited_df.iterrows():
         row_no = int(row["_ROW"])
@@ -128,14 +127,13 @@ if st.button("💾 Save Changes", use_container_width=True):
 
         if changed:
             sheet.update(f"A{row_no}", [values])
-            updated += 1
+            updates += 1
 
-    if updated:
-        st.success(f"✅ {updated} row(s) saved to Google Sheet")
+    if updates:
+        st.success(f"✅ {updates} row(s) saved")
     else:
         st.info("No changes detected")
 
-st.markdown("</div>", unsafe_allow_html=True)
 
 
 
