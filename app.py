@@ -7,26 +7,26 @@ from datetime import datetime
 # ================= PAGE CONFIG =================
 st.set_page_config(page_title="KONE Inventory", layout="wide")
 
-# ================= STYLES =================
+# ================= STYLE =================
 st.markdown("""
 <style>
 .block-container { padding-top: 1rem; padding-bottom: 6rem; }
-.kone-header { text-align:center; padding:14px 0; border-bottom:1px solid #ddd; }
-.kone-logo { display:flex; justify-content:center; gap:6px; }
-.kone-box {
+.header { text-align:center; margin-bottom:12px; }
+.logo { display:flex; justify-content:center; gap:6px; }
+.box {
     width:46px; height:46px;
     background:#1f4bff; color:white;
     font-size:26px; font-weight:900;
     display:flex; align-items:center; justify-content:center;
     border-radius:4px;
 }
-.kone-subtitle { font-weight:600; color:#444; }
-.kone-date { font-size:12px; color:#777; }
+.subtitle { font-weight:600; color:#444; }
+.date { font-size:12px; color:#777; }
 
-.floating-save {
+.save {
     position:fixed; bottom:14px; right:14px; z-index:9999;
 }
-.floating-save button {
+.save button {
     background:#1f4bff !important;
     color:white !important;
     border-radius:50px !important;
@@ -39,22 +39,19 @@ st.markdown("""
 # ================= HEADER =================
 today = datetime.now().strftime("%d %b %Y")
 st.markdown(f"""
-<div class="kone-header">
-  <div class="kone-logo">
-    <div class="kone-box">K</div>
-    <div class="kone-box">O</div>
-    <div class="kone-box">N</div>
-    <div class="kone-box">E</div>
+<div class="header">
+  <div class="logo">
+    <div class="box">K</div><div class="box">O</div>
+    <div class="box">N</div><div class="box">E</div>
   </div>
-  <div class="kone-subtitle">Lift Inventory Tracker</div>
-  <div class="kone-date">{today}</div>
+  <div class="subtitle">Lift Inventory Tracker</div>
+  <div class="date">{today}</div>
 </div>
 """, unsafe_allow_html=True)
 
 # ================= CONFIG =================
 SHEET_ID = "1PY9T5x0sqaDnHTZ5RoDx3LYGBu8bqOT7j4itdlC9yuE"
 SHEET_NAME = "Sheet1"
-
 EDITABLE_COLS = ["QTY", "LIFT NO", "CALL OUT", "DATE"]
 
 # ================= AUTH =================
@@ -63,8 +60,7 @@ scopes = [
     "https://www.googleapis.com/auth/drive",
 ]
 creds = Credentials.from_service_account_info(
-    st.secrets["gcp_service_account"],
-    scopes=scopes,
+    st.secrets["gcp_service_account"], scopes=scopes
 )
 client = gspread.authorize(creds)
 sheet = client.open_by_key(SHEET_ID).worksheet(SHEET_NAME)
@@ -74,9 +70,11 @@ df = pd.DataFrame(sheet.get_all_records())
 if df.empty:
     st.stop()
 
+# 🔴 CRITICAL FIX: FORCE STRING TYPE
 for col in EDITABLE_COLS:
     if col not in df.columns:
         df[col] = ""
+    df[col] = df[col].astype(str)
 
 df["_ROW"] = range(2, len(df) + 2)
 
@@ -103,7 +101,7 @@ edited_df = st.data_editor(
 )
 
 # ================= SAVE =================
-st.markdown('<div class="floating-save">', unsafe_allow_html=True)
+st.markdown('<div class="save">', unsafe_allow_html=True)
 save = st.button("💾 Save")
 st.markdown('</div>', unsafe_allow_html=True)
 
@@ -113,9 +111,7 @@ if save:
         row_no = int(row["_ROW"])
         original = df[df["_ROW"] == row_no].iloc[0]
 
-        values = []
-        changed = False
-
+        values, changed = [], False
         for col in df.columns:
             if col == "_ROW":
                 continue
@@ -130,6 +126,7 @@ if save:
             updated += 1
 
     st.success(f"✅ {updated} row(s) saved")
+
 
 
 
