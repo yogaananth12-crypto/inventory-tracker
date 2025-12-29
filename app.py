@@ -19,7 +19,7 @@ creds = Credentials.from_service_account_info(
 )
 
 client = gspread.authorize(creds)
-sheet = client.open_by_key(SHEET_ID).worksheet(SHEET_NAME)
+sheet = client.open_by_key(1PY9T5x0sqaDnHTZ5RoDx3LYGBu8bqOT7j4itdlC9yuE).worksheet(SHEET1)
 
 # ---------------- LOAD DATA ----------------
 data = sheet.get_all_records()
