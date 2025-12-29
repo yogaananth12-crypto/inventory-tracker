@@ -3,11 +3,11 @@ import pandas as pd
 import gspread
 from google.oauth2.service_account import Credentials
 
-# ---------------- CONFIG ----------------
-SHEET_ID = "1PY9T5x0sqaDnHTZ5RoDx3LYGBu8bqOT7j4itdlC9yuE"
-SHEET_NAME = "Sheet1"   # must match tab name exactly
+st.set_page_config(page_title="Spare Parts Inventory", layout="wide")
+st.title("🔧 Spare Parts Inventory")
 
-EDITABLE_COLS = ["QTY", "LIFT NO", "CALL OUT", "DATE"]
+SHEET_ID = "1PY9T5x0sqaDnHTZ5RoDx3LYGBu8bqOT7j4itdlC9yuE"
+SHEET_NAME = "Sheet1"
 
 # ---------------- AUTH ----------------
 scopes = [
@@ -23,54 +23,65 @@ creds = Credentials.from_service_account_info(
 client = gspread.authorize(creds)
 sheet = client.open_by_key(SHEET_ID).worksheet(SHEET_NAME)
 
-# ---------------- LOAD DATA ----------------
+# ---------------- LOAD ----------------
 data = sheet.get_all_records()
 df = pd.DataFrame(data)
 
-st.title("Inventory Tracker")
+df.columns = df.columns.str.strip().str.upper()
 
-# ---------------- SEARCH BAR ----------------
-search = st.text_input("🔍 Search (Part No / Lift No / Call Out)")
+required = ["S.NO", "PART NO", "DESCRIPTION", "BOX NO",
+            "QTY", "LIFT NO", "CALL OUT", "DATE"]
 
+for c in required:
+    if c not in df.columns:
+        df[c] = ""
+
+df["QTY"] = pd.to_numeric(df["QTY"], errors="coerce").fillna(0).astype(int)
+
+# ---------------- SEARCH ----------------
+search = st.text_input("🔍 Search Part No or Description")
+
+view_df = df.copy()
 if search:
-    df = df[
-        df.apply(
-            lambda row: row.astype(str).str.contains(search, case=False).any(),
-            axis=1
-        )
+    view_df = view_df[
+        view_df["PART NO"].astype(str).str.contains(search, case=False, na=False)
+        | view_df["DESCRIPTION"].astype(str).str.contains(search, case=False, na=False)
     ]
 
-# ---------------- EDIT TABLE ----------------
-st.subheader("Edit Inventory")
-
+# ---------------- EDIT ----------------
 edited_df = st.data_editor(
-    df,
-    disabled=[c for c in df.columns if c not in EDITABLE_COLS],
-    use_container_width=True,
-    num_rows="fixed",
-    key="editor"
+    view_df,
+    disabled=["S.NO", "PART NO", "DESCRIPTION", "BOX NO"],
+    hide_index=True,
+    use_container_width=True
 )
 
-# ---------------- SAVE BUTTON ----------------
-if st.button("💾 Save Changes"):
-    try:
-        updates = []
+# ---------------- SAVE ----------------
+if st.button("💾 SAVE"):
+    df_idx = df.set_index("S.NO")
+    edited_idx = edited_df.set_index("S.NO")
 
-        for i in range(len(df)):
-            if not df.loc[i, EDITABLE_COLS].equals(edited_df.loc[i, EDITABLE_COLS]):
-                updates.append((i, edited_df.loc[i]))
+    updates = []
 
-        for row_index, row in updates:
-            sheet_row = row_index + 2  # +2 because header row
+    for sno in edited_idx.index:
+        for col in ["QTY", "LIFT NO", "CALL OUT", "DATE"]:
+            if df_idx.loc[sno, col] != edited_idx.loc[sno, col]:
+                row_num = df_idx.index.get_loc(sno) + 2
+                col_num = df.columns.get_loc(col) + 1
+                updates.append({
+                    "range": gspread.utils.rowcol_to_a1(row_num, col_num),
+                    "values": [[edited_idx.loc[sno, col]]]
+                })
 
-            for col_name in EDITABLE_COLS:
-                col_index = df.columns.get_loc(col_name) + 1
-                sheet.update_cell(sheet_row, col_index, row[col_name])
+    if updates:
+        sheet.batch_update([{
+            "range": u["range"],
+            "values": u["values"]
+        } for u in updates])
+        st.success("Saved to Google Sheet ✅")
+    else:
+        st.info("No changes detected")
 
-        st.success("✅ Changes saved to Google Sheet!")
-
-    except Exception as e:
-        st.error(f"❌ Save failed: {e}")
 
 
 
