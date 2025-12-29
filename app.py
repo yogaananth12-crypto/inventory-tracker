@@ -38,8 +38,11 @@ for col in EDITABLE_COLS:
     if col not in df.columns:
         df[col] = ""
 
-# Add Google Sheet row number
+# Add sheet row number
 df["_ROW_"] = range(2, len(df) + 2)
+
+# 🔴 CRITICAL FIX: FORCE EVERYTHING TO STRING
+df = df.astype(str)
 
 # ================= SEARCH =================
 st.subheader("🔍 Search")
@@ -48,13 +51,11 @@ search = st.text_input("Search any value")
 df_view = df.copy()
 if search:
     df_view = df_view[
-        df_view.astype(str)
-        .apply(lambda r: r.str.contains(search, case=False, na=False))
-        .any(axis=1)
+        df_view.apply(lambda r: search.lower() in " ".join(r).lower(), axis=1)
     ]
 
 # ================= DATA EDITOR =================
-st.subheader("📋 Inventory (Editable)")
+st.subheader("📋 Inventory")
 
 edited_df = st.data_editor(
     df_view,
@@ -69,32 +70,28 @@ if st.button("💾 Save Changes"):
 
     for _, row in edited_df.iterrows():
         row_no = int(row["_ROW_"])
-        original = df[df["_ROW_"] == row_no].iloc[0]
+        original = df[df["_ROW_"] == str(row_no)].iloc[0]
 
         changed = False
-        updated_values = []
+        values = []
 
         for col in df.columns:
             if col == "_ROW_":
                 continue
 
-            # 🔒 Only save allowed columns
             if col in EDITABLE_COLS:
-                new_val = row[col]
-                old_val = original[col]
+                new_val = row[col].strip()
+                old_val = original[col].strip()
 
-                if pd.isna(new_val):
-                    new_val = ""
-
-                if str(new_val) != str(old_val):
+                if new_val != old_val:
                     changed = True
 
-                updated_values.append(new_val)
+                values.append(new_val)
             else:
-                updated_values.append(original[col])
+                values.append(original[col])
 
         if changed:
-            sheet.update(f"A{row_no}", [updated_values])
+            sheet.update(f"A{row_no}", [values])
             updated += 1
 
     if updated:
@@ -102,4 +99,5 @@ if st.button("💾 Save Changes"):
         st.experimental_rerun()
     else:
         st.info("No changes detected")
+
 
