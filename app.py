@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import gspread
 from google.oauth2.service_account import Credentials
+from datetime import date
 
 st.set_page_config(page_title="Inventory Tracker", layout="wide")
 
@@ -15,7 +16,7 @@ SCOPES = [
     "https://www.googleapis.com/auth/drive"
 ]
 
-REQUIRED_COLUMNS = [
+COLUMNS = [
     "S.NO",
     "PART NO",
     "DESCRIPTION",
@@ -26,7 +27,7 @@ REQUIRED_COLUMNS = [
     "DATE"
 ]
 
-EDITABLE_COLUMNS = ["QTY", "LIFT NO", "CALL OUT", "DATE"]
+EDITABLE = ["QTY", "LIFT NO", "CALL OUT", "DATE"]
 
 # =========================
 # AUTH
@@ -43,42 +44,51 @@ sheet = client.open_by_url(SHEET_URL).sheet1
 # =========================
 df = pd.DataFrame(sheet.get_all_records())
 
-if df.empty:
-    st.error("❌ Sheet is empty or headers missing")
-    st.stop()
-
-# Normalize column names
 df.columns = df.columns.astype(str).str.strip().str.upper()
 
-# Ensure required columns exist
-for col in REQUIRED_COLUMNS:
+# Ensure columns exist
+for col in COLUMNS:
     if col not in df.columns:
         df[col] = ""
 
-# Reorder columns
-df = df[REQUIRED_COLUMNS]
+df = df[COLUMNS]
+
+# Force correct dtypes
+df["QTY"] = pd.to_numeric(df["QTY"], errors="coerce").fillna(0).astype(int)
+df["LIFT NO"] = df["LIFT NO"].astype(str)
+df["CALL OUT"] = df["CALL OUT"].astype(str)
+df["DATE"] = pd.to_datetime(df["DATE"], errors="coerce")
 
 st.title("📦 Spare Parts Inventory")
 
 # =========================
-# SEARCH BAR
+# SEARCH
 # =========================
-search = st.text_input("🔍 Search Part No or Description")
+search = st.text_input("🔍 Search Part No / Description")
 
 if search:
     df = df[
-        df["PART NO"].astype(str).str.contains(search, case=False, na=False) |
-        df["DESCRIPTION"].astype(str).str.contains(search, case=False, na=False)
+        df["PART NO"].str.contains(search, case=False, na=False) |
+        df["DESCRIPTION"].str.contains(search, case=False, na=False)
     ]
 
 # =========================
-# EDIT TABLE
+# DATA EDITOR
 # =========================
 edited_df = st.data_editor(
     df,
     use_container_width=True,
-    disabled=[c for c in df.columns if c not in EDITABLE_COLUMNS],
-    num_rows="fixed"
+    num_rows="fixed",
+    disabled=[c for c in COLUMNS if c not in EDITABLE],
+    column_config={
+        "QTY": st.column_config.NumberColumn("QTY", min_value=0),
+        "LIFT NO": st.column_config.TextColumn("LIFT NO"),
+        "CALL OUT": st.column_config.SelectboxColumn(
+            "CALL OUT",
+            options=["", "YES", "NO"]
+        ),
+        "DATE": st.column_config.DateColumn("DATE")
+    }
 )
 
 # =========================
@@ -86,15 +96,18 @@ edited_df = st.data_editor(
 # =========================
 if st.button("💾 Save Changes"):
     with st.spinner("Saving to Google Sheets..."):
-        edited_df = edited_df.fillna("").astype(str)
+        save_df = edited_df.copy()
+        save_df["DATE"] = save_df["DATE"].astype(str)
 
         sheet.clear()
         sheet.update(
-            [edited_df.columns.tolist()] +
-            edited_df.values.tolist()
+            [save_df.columns.tolist()] +
+            save_df.astype(str).values.tolist()
         )
 
-    st.success("✅ Saved successfully. All users will see updates.")
+    st.success("✅ Saved successfully. All users see updates.")
+
+
 
 
 
