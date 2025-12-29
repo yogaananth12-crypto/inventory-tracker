@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import gspread
 from google.oauth2.service_account import Credentials
+import uuid
 
 st.set_page_config(page_title="Inventory Tracker", layout="wide")
 
@@ -15,18 +16,7 @@ SCOPES = [
     "https://www.googleapis.com/auth/drive"
 ]
 
-COLUMNS = [
-    "S.NO",
-    "PART NO",
-    "DESCRIPTION",
-    "BOX NO",
-    "QTY",
-    "LIFT NO",
-    "CALL OUT",
-    "DATE"
-]
-
-EDITABLE = ["QTY", "LIFT NO", "CALL OUT", "DATE"]
+EDITABLE_COLS = ["QTY", "LIFT NO", "CALL OUT", "DATE"]
 
 # =====================
 # AUTH
@@ -45,7 +35,9 @@ if "df" not in st.session_state:
     df = pd.DataFrame(sheet.get_all_records())
     df.columns = df.columns.str.upper().str.strip()
 
-    df["S.NO"] = df["S.NO"].astype(str)  # 🔑 IMPORTANT
+    # Create permanent internal row id
+    df["__ROW_ID__"] = [str(uuid.uuid4()) for _ in range(len(df))]
+
     df["QTY"] = pd.to_numeric(df["QTY"], errors="coerce").fillna(0).astype(int)
 
     for col in ["LIFT NO", "CALL OUT", "DATE"]:
@@ -71,20 +63,19 @@ else:
     df_view = df
 
 # =====================
-# DATA EDITOR (FIXED)
+# DATA EDITOR (FINAL FIX)
 # =====================
 edited = st.data_editor(
     df_view,
     use_container_width=True,
     num_rows="fixed",
-    row_key="S.NO",  # 🔥 THIS IS THE FIX
-    disabled=[c for c in COLUMNS if c not in EDITABLE],
+    row_key="__ROW_ID__",   # 🔥 STABLE, NEVER FAILS
+    disabled=[c for c in df.columns if c not in EDITABLE_COLS],
     column_config={
         "QTY": st.column_config.NumberColumn("QTY", min_value=0),
         "LIFT NO": st.column_config.TextColumn("LIFT NO"),
         "CALL OUT": st.column_config.SelectboxColumn(
-            "CALL OUT",
-            options=["", "YES", "NO"]
+            "CALL OUT", options=["", "YES", "NO"]
         ),
         "DATE": st.column_config.TextColumn("DATE")
     }
@@ -93,17 +84,20 @@ edited = st.data_editor(
 # =====================
 # APPLY EDITS BACK
 # =====================
-st.session_state.df.set_index("S.NO", inplace=True)
-edited.set_index("S.NO", inplace=True)
+df.set_index("__ROW_ID__", inplace=True)
+edited.set_index("__ROW_ID__", inplace=True)
 
-st.session_state.df.update(edited)
-st.session_state.df.reset_index(inplace=True)
+df.update(edited)
+df.reset_index(inplace=True)
+
+st.session_state.df = df
 
 # =====================
-# SAVE TO SHEET
+# SAVE TO GOOGLE SHEET
 # =====================
 if st.button("💾 Save Changes"):
-    save_df = st.session_state.df.fillna("").astype(str)
+    save_df = st.session_state.df.drop(columns="__ROW_ID__")
+    save_df = save_df.fillna("").astype(str)
 
     sheet.clear()
     sheet.update(
@@ -111,7 +105,8 @@ if st.button("💾 Save Changes"):
         save_df.values.tolist()
     )
 
-    st.success("✅ Saved. All fields remain editable.")
+    st.success("✅ Saved. All columns stay editable.")
+
 
 
 
