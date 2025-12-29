@@ -3,7 +3,6 @@ import pandas as pd
 import gspread
 from google.oauth2.service_account import Credentials
 
-# ================= PAGE CONFIG =================
 st.set_page_config(page_title="Inventory Tracker", layout="wide")
 
 # ================= CONFIG =================
@@ -39,57 +38,69 @@ for col in EDITABLE_COLS:
     if col not in df.columns:
         df[col] = ""
 
-# Add stable row number (Google Sheet row index)
-df["_ROW"] = range(2, len(df) + 2)
+# Add Google Sheet row number
+df["_ROW_"] = range(2, len(df) + 2)
 
 # ================= SEARCH =================
-search = st.text_input("🔍 Search")
+st.subheader("🔍 Search")
+search = st.text_input("Search any value")
 
 df_view = df.copy()
 if search:
     df_view = df_view[
-        df_view.apply(lambda r: search.lower() in str(r).lower(), axis=1)
+        df_view.astype(str)
+        .apply(lambda r: r.str.contains(search, case=False, na=False))
+        .any(axis=1)
     ]
 
 # ================= DATA EDITOR =================
+st.subheader("📋 Inventory (Editable)")
+
 edited_df = st.data_editor(
     df_view,
     use_container_width=True,
     hide_index=True,
-    disabled=[c for c in df_view.columns if c not in EDITABLE_COLS],
     key="editor",
 )
 
 # ================= SAVE =================
 if st.button("💾 Save Changes"):
-    updated_rows = 0
+    updated = 0
 
     for _, row in edited_df.iterrows():
-        row_number = int(row["_ROW"])
-
-        original = df[df["_ROW"] == row_number].iloc[0]
+        row_no = int(row["_ROW_"])
+        original = df[df["_ROW_"] == row_no].iloc[0]
 
         changed = False
-        new_values = []
+        updated_values = []
 
         for col in df.columns:
-            if col == "_ROW":
+            if col == "_ROW_":
                 continue
 
-            new_val = "" if pd.isna(row[col]) else str(row[col])
-            old_val = "" if pd.isna(original[col]) else str(original[col])
+            # 🔒 Only save allowed columns
+            if col in EDITABLE_COLS:
+                new_val = row[col]
+                old_val = original[col]
 
-            if new_val != old_val:
-                changed = True
+                if pd.isna(new_val):
+                    new_val = ""
 
-            new_values.append(new_val)
+                if str(new_val) != str(old_val):
+                    changed = True
+
+                updated_values.append(new_val)
+            else:
+                updated_values.append(original[col])
 
         if changed:
-            sheet.update(f"A{row_number}", [new_values])
-            updated_rows += 1
+            sheet.update(f"A{row_no}", [updated_values])
+            updated += 1
 
-    if updated_rows:
-        st.success(f"✅ {updated_rows} row(s) updated in Google Sheet")
+    if updated:
+        st.success(f"✅ {updated} row(s) saved to Google Sheet")
+        st.experimental_rerun()
     else:
-        st.info("No changes to save")
+        st.info("No changes detected")
+
 
