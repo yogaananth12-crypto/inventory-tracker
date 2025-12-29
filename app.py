@@ -39,7 +39,7 @@ for col in EDITABLE_COLS:
     if col not in df.columns:
         df[col] = ""
 
-# Add stable row number (Google Sheet row index)
+# Stable Google Sheet row number
 df["_ROW"] = range(2, len(df) + 2)
 
 # ================= SEARCH =================
@@ -51,26 +51,35 @@ if search:
         df_view.apply(lambda r: search.lower() in str(r).lower(), axis=1)
     ]
 
+# ================= COLUMN CONFIG (CRITICAL) =================
+column_config = {
+    "QTY": st.column_config.NumberColumn("QTY", step=1),
+    "LIFT NO": st.column_config.TextColumn("LIFT NO"),
+    "CALL OUT": st.column_config.TextColumn("CALL OUT"),
+    "DATE": st.column_config.TextColumn("DATE"),
+    "_ROW": st.column_config.Column(disabled=True),
+}
+
 # ================= DATA EDITOR =================
 edited_df = st.data_editor(
     df_view,
     use_container_width=True,
     hide_index=True,
+    column_config=column_config,
     disabled=[c for c in df_view.columns if c not in EDITABLE_COLS],
     key="editor",
 )
 
 # ================= SAVE =================
 if st.button("💾 Save Changes"):
-    updated_rows = 0
+    updated = 0
 
     for _, row in edited_df.iterrows():
         row_number = int(row["_ROW"])
-
         original = df[df["_ROW"] == row_number].iloc[0]
 
-        changed = False
         new_values = []
+        changed = False
 
         for col in df.columns:
             if col == "_ROW":
@@ -86,12 +95,14 @@ if st.button("💾 Save Changes"):
 
         if changed:
             sheet.update(f"A{row_number}", [new_values])
-            updated_rows += 1
+            updated += 1
 
-    if updated_rows:
-        st.success(f"✅ {updated_rows} row(s) updated in Google Sheet")
+    if updated:
+        st.success(f"✅ {updated} row(s) updated in Google Sheet")
+        st.rerun()
     else:
         st.info("No changes to save")
+
 
 
 
