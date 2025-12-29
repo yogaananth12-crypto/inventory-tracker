@@ -26,8 +26,8 @@ client = gspread.authorize(creds)
 sheet = client.open_by_key(SHEET_ID).worksheet(SHEET_NAME)
 
 # ================= LOAD DATA =================
-data = sheet.get_all_records()
-df = pd.DataFrame(data)
+records = sheet.get_all_records()
+df = pd.DataFrame(records)
 
 if df.empty:
     st.error("Google Sheet is empty")
@@ -53,26 +53,13 @@ if search:
         .any(axis=1)
     ]
 
-# ================= COLUMN CONFIG =================
-column_config = {}
-for col in df_view.columns:
-    if col in EDITABLE_COLS:
-        column_config[col] = st.column_config.TextColumn(
-            col, required=False
-        )
-    else:
-        column_config[col] = st.column_config.TextColumn(
-            col, disabled=True
-        )
-
 # ================= DATA EDITOR =================
-st.subheader("📋 Inventory Editor")
+st.subheader("📋 Inventory (Editable)")
 
 edited_df = st.data_editor(
     df_view,
     use_container_width=True,
     hide_index=True,
-    column_config=column_config,
     key="editor",
 )
 
@@ -84,26 +71,30 @@ if st.button("💾 Save Changes"):
         row_no = int(row["_ROW_"])
         original = df[df["_ROW_"] == row_no].iloc[0]
 
-        new_values = []
         changed = False
+        updated_values = []
 
         for col in df.columns:
             if col == "_ROW_":
                 continue
 
-            new = row[col]
-            old = original[col]
+            # 🔒 Only save allowed columns
+            if col in EDITABLE_COLS:
+                new_val = row[col]
+                old_val = original[col]
 
-            if pd.isna(new):
-                new = ""
+                if pd.isna(new_val):
+                    new_val = ""
 
-            if str(new) != str(old):
-                changed = True
+                if str(new_val) != str(old_val):
+                    changed = True
 
-            new_values.append(new)
+                updated_values.append(new_val)
+            else:
+                updated_values.append(original[col])
 
         if changed:
-            sheet.update(f"A{row_no}", [new_values])
+            sheet.update(f"A{row_no}", [updated_values])
             updated += 1
 
     if updated:
@@ -111,3 +102,4 @@ if st.button("💾 Save Changes"):
         st.experimental_rerun()
     else:
         st.info("No changes detected")
+
