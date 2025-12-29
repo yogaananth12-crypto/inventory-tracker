@@ -32,17 +32,12 @@ creds = Credentials.from_service_account_info(
 client = gspread.authorize(creds)
 sheet = client.open_by_key(SHEET_ID).worksheet(SHEET_NAME)
 
-# ================= LOAD DATA =================
+# ================= LOAD =================
 values = sheet.get_all_values()
 headers = values[0]
 rows = values[1:]
 
 df = pd.DataFrame(rows, columns=headers)
-
-if df.empty:
-    st.warning("Sheet is empty")
-    st.stop()
-
 df["_ROW"] = range(2, len(df) + 2)
 
 # ================= SEARCH =================
@@ -54,15 +49,29 @@ if search:
         view_df.apply(lambda r: search.lower() in str(r).lower(), axis=1)
     ]
 
-# ================= DISPLAY TABLE (READ ONLY) =================
+# ================= COLUMN ORDER (IMPORTANT) =================
+DISPLAY_ORDER = [
+    "PART NO",
+    "DESCRIPTION",
+    "BOX NO",
+    "QTY",
+    "LIFT NO",
+    "CALL OUT",
+    "DATE",
+]
+
+final_cols = [c for c in DISPLAY_ORDER if c in view_df.columns]
+
+# ================= TABLE =================
 st.subheader("📦 Inventory")
+
 st.dataframe(
-    view_df.drop(columns=["_ROW"]),
+    view_df[final_cols],
     use_container_width=True,
     height=420
 )
 
-# ================= EDIT SECTION =================
+# ================= EDIT =================
 st.divider()
 st.subheader("✏️ Edit Item")
 
@@ -77,10 +86,10 @@ if selected:
     row_no = row_map[selected]
     row = df[df["_ROW"] == row_no].iloc[0]
 
-    with st.form("edit_form"):
+    with st.form("edit"):
         qty = st.number_input("QTY", value=int(row.get("QTY", 0)))
-        lift_no = st.text_input("LIFT NO", value=row.get("LIFT NO", ""))
-        call_out = st.text_input("CALL OUT", value=row.get("CALL OUT", ""))
+        lift = st.text_input("LIFT NO", row.get("LIFT NO", ""))
+        call = st.text_input("CALL OUT", row.get("CALL OUT", ""))
         dt = st.date_input(
             "DATE",
             value=date.fromisoformat(row["DATE"])
@@ -90,14 +99,14 @@ if selected:
         save = st.form_submit_button("💾 Save")
 
     if save:
-        col_index = {h: i + 1 for i, h in enumerate(headers)}
+        col_idx = {h: i + 1 for i, h in enumerate(headers)}
 
-        sheet.update_cell(row_no, col_index["QTY"], qty)
-        sheet.update_cell(row_no, col_index["LIFT NO"], lift_no)
-        sheet.update_cell(row_no, col_index["CALL OUT"], call_out)
-        sheet.update_cell(row_no, col_index["DATE"], dt.isoformat())
+        sheet.update_cell(row_no, col_idx["QTY"], qty)
+        sheet.update_cell(row_no, col_idx["LIFT NO"], lift)
+        sheet.update_cell(row_no, col_idx["CALL OUT"], call)
+        sheet.update_cell(row_no, col_idx["DATE"], dt.isoformat())
 
-        st.success("✅ Updated successfully")
+        st.success("✅ Updated")
         st.rerun()
 
 
