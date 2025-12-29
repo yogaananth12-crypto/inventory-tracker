@@ -2,21 +2,22 @@ import streamlit as st
 import pandas as pd
 import gspread
 from google.oauth2.service_account import Credentials
-from datetime import date
 
 # ================= PAGE =================
 st.set_page_config(page_title="KONE Inventory", layout="wide")
 
 st.markdown("""
-<div style="text-align:center;margin-bottom:10px">
-  <h1 style="color:#005EB8;font-weight:900;letter-spacing:6px;">KONE</h1>
-  <div style="font-size:18px;font-weight:600;">Lift Inventory Tracker</div>
+<div style="text-align:center">
+  <h1 style="color:#005EB8;letter-spacing:6px;">KONE</h1>
+  <h3>Lift Inventory Tracker</h3>
 </div>
 """, unsafe_allow_html=True)
 
 # ================= CONFIG =================
 SHEET_ID = "1PY9T5x0sqaDnHTZ5RoDx3LYGBu8bqOT7j4itdlC9yuE"
 SHEET_NAME = "Sheet1"
+
+EDITABLE = ["QTY", "LIFT NO", "CALL OUT", "DATE"]
 
 # ================= AUTH =================
 scopes = [
@@ -33,24 +34,30 @@ client = gspread.authorize(creds)
 sheet = client.open_by_key(SHEET_ID).worksheet(SHEET_NAME)
 
 # ================= LOAD =================
-values = sheet.get_all_values()
-headers = values[0]
-rows = values[1:]
+data = sheet.get_all_values()
+headers = data[0]
+rows = data[1:]
 
 df = pd.DataFrame(rows, columns=headers)
+
+# Force column types (THIS IS THE FIX)
+df["QTY"] = pd.to_numeric(df["QTY"], errors="coerce").fillna(0).astype(int)
+df["LIFT NO"] = df["LIFT NO"].astype(str)
+df["CALL OUT"] = df["CALL OUT"].astype(str)
+df["DATE"] = df["DATE"].astype(str)
+
+# Row number for saving
 df["_ROW"] = range(2, len(df) + 2)
 
 # ================= SEARCH =================
 search = st.text_input("🔍 Search")
 
-view_df = df.copy()
+view = df.copy()
 if search:
-    view_df = view_df[
-        view_df.apply(lambda r: search.lower() in str(r).lower(), axis=1)
-    ]
+    view = view[view.apply(lambda r: search.lower() in str(r).lower(), axis=1)]
 
-# ================= COLUMN ORDER (IMPORTANT) =================
-DISPLAY_ORDER = [
+# ================= COLUMN ORDER =================
+ORDER = [
     "PART NO",
     "DESCRIPTION",
     "BOX NO",
@@ -60,54 +67,53 @@ DISPLAY_ORDER = [
     "DATE",
 ]
 
-final_cols = [c for c in DISPLAY_ORDER if c in view_df.columns]
+cols = [c for c in ORDER if c in view.columns]
+view = view[cols + ["_ROW"]]
 
-# ================= TABLE =================
-st.subheader("📦 Inventory")
-
-st.dataframe(
-    view_df[final_cols],
+# ================= EDITOR =================
+edited = st.data_editor(
+    view,
     use_container_width=True,
-    height=420
+    hide_index=True,
+    column_config={
+        "QTY": st.column_config.NumberColumn("QTY", step=1),
+        "LIFT NO": st.column_config.TextColumn("LIFT NO"),
+        "CALL OUT": st.column_config.TextColumn("CALL OUT"),
+        "DATE": st.column_config.TextColumn("DATE"),
+    },
+    disabled=[c for c in cols if c not in EDITABLE],
+    key="editor"
 )
 
-# ================= EDIT =================
-st.divider()
-st.subheader("✏️ Edit Item")
+# ================= SAVE =================
+if st.button("💾 Save Changes"):
+    saved = 0
 
-row_map = {
-    f"{r['PART NO']} | {r['DESCRIPTION']}": r["_ROW"]
-    for _, r in view_df.iterrows()
-}
+    for _, row in edited.iterrows():
+        row_no = int(row["_ROW"])
+        original = df[df["_ROW"] == row_no].iloc[0]
 
-selected = st.selectbox("Select Part", list(row_map.keys()))
+        updates = []
+        changed = False
 
-if selected:
-    row_no = row_map[selected]
-    row = df[df["_ROW"] == row_no].iloc[0]
+        for col in headers:
+            new = str(row[col]) if col in row else ""
+            old = str(original[col])
 
-    with st.form("edit"):
-        qty = st.number_input("QTY", value=int(row.get("QTY", 0)))
-        lift = st.text_input("LIFT NO", row.get("LIFT NO", ""))
-        call = st.text_input("CALL OUT", row.get("CALL OUT", ""))
-        dt = st.date_input(
-            "DATE",
-            value=date.fromisoformat(row["DATE"])
-            if row.get("DATE") else date.today()
-        )
+            updates.append(new)
+            if new != old:
+                changed = True
 
-        save = st.form_submit_button("💾 Save")
+        if changed:
+            sheet.update(f"A{row_no}", [updates])
+            saved += 1
 
-    if save:
-        col_idx = {h: i + 1 for i, h in enumerate(headers)}
-
-        sheet.update_cell(row_no, col_idx["QTY"], qty)
-        sheet.update_cell(row_no, col_idx["LIFT NO"], lift)
-        sheet.update_cell(row_no, col_idx["CALL OUT"], call)
-        sheet.update_cell(row_no, col_idx["DATE"], dt.isoformat())
-
-        st.success("✅ Updated")
+    if saved:
+        st.success(f"✅ {saved} row(s) updated")
         st.rerun()
+    else:
+        st.info("No changes detected")
+
 
 
 
