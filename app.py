@@ -40,13 +40,13 @@ for col in EDITABLE_COLS:
     if col not in df.columns:
         df[col] = ""
 
-# Fix column types
+# Fix data types
 df["QTY"] = pd.to_numeric(df["QTY"], errors="coerce").fillna(0).astype(int)
 df["CALL OUT"] = pd.to_numeric(df["CALL OUT"], errors="coerce").fillna(0).astype(int)
 df["LIFT NO"] = df["LIFT NO"].astype(str)
 df["DATE"] = pd.to_datetime(df["DATE"], errors="coerce")
 
-# Store Google Sheet row number
+# Google Sheet row number
 df["_ROW"] = range(2, len(df) + 2)
 
 # ================= SEARCH =================
@@ -92,8 +92,19 @@ if st.button("💾 Save Changes"):
             if col == "_ROW":
                 continue
 
-            new_val = "" if pd.isna(row[col]) else row[col]
-            old_val = "" if pd.isna(original[col]) else original[col]
+            new_val = row[col]
+            old_val = original[col]
+
+            # 🔑 CRITICAL FIX
+            if pd.isna(new_val):
+                new_val = ""
+            elif isinstance(new_val, pd.Timestamp):
+                new_val = new_val.strftime("%Y-%m-%d")
+
+            if pd.isna(old_val):
+                old_val = ""
+            elif isinstance(old_val, pd.Timestamp):
+                old_val = old_val.strftime("%Y-%m-%d")
 
             if str(new_val) != str(old_val):
                 changed = True
@@ -105,9 +116,10 @@ if st.button("💾 Save Changes"):
             updated += 1
 
     if updated:
-        st.success(f"✅ {updated} row(s) updated in Google Sheet")
+        st.success(f"✅ {updated} row(s) saved to Google Sheet")
     else:
         st.info("No changes detected")
+
 
 
 
