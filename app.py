@@ -5,97 +5,53 @@ from google.oauth2.service_account import Credentials
 from PIL import Image
 
 # ================= PAGE CONFIG =================
-st.set_page_config(
-    page_title="KONE Inventory Tracker",
-    layout="wide"
-)
+st.set_page_config(page_title="KONE Inventory Tracker", layout="wide")
 
-# ================= BRAND COLORS =================
+# ================= COLORS =================
 KONE_BLUE = "#005EB8"
 KONE_DARK = "#003A8F"
 
-# ================= STYLES =================
-st.markdown(
-    f"""
-    <style>
-        html, body, [class*="css"] {{
-            font-size: 16px;
-        }}
-
-        .kone-header {{
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 16px;
-            padding: 14px 0 18px 0;
-        }}
-
-        .kone-title {{
-            font-size: 40px;
-            font-weight: 900;
-            color: {KONE_BLUE};
-            letter-spacing: 1px;
-            line-height: 1;
-        }}
-
-        .kone-subtitle {{
-            font-size: 18px;
-            font-weight: 600;
-            color: {KONE_DARK};
-            margin-top: 4px;
-        }}
-
-        /* Save button */
-        div.stButton > button {{
-            background-color: {KONE_BLUE};
-            color: white;
-            font-weight: 700;
-            padding: 0.6rem 1.4rem;
-            border-radius: 8px;
-            border: none;
-        }}
-
-        div.stButton > button:hover {{
-            background-color: {KONE_DARK};
-            color: white;
-        }}
-
-        /* Data editor font */
-        div[data-testid="stDataEditor"] {{
-            font-size: 16px;
-        }}
-    </style>
-    """,
-    unsafe_allow_html=True
-)
+# ================= STYLE =================
+st.markdown(f"""
+<style>
+.kone-title {{
+    font-size: 40px;
+    font-weight: 900;
+    color: {KONE_BLUE};
+}}
+.kone-sub {{
+    font-size: 18px;
+    font-weight: 600;
+    color: {KONE_DARK};
+}}
+div.stButton > button {{
+    background-color: {KONE_BLUE};
+    color: white;
+    font-weight: 700;
+    border-radius: 8px;
+}}
+div.stButton > button:hover {{
+    background-color: {KONE_DARK};
+}}
+</style>
+""", unsafe_allow_html=True)
 
 # ================= HEADER =================
-col1, col2 = st.columns([1, 4])
-
-with col1:
+c1, c2 = st.columns([1, 4])
+with c1:
     try:
-        logo = Image.open("kone_logo.png")
-        st.image(logo, width=90)
+        st.image("kone_logo.png", width=90)
     except:
         pass
-
-with col2:
-    st.markdown(
-        """
-        <div>
-            <div class="kone-title">KONE</div>
-            <div class="kone-subtitle">Inventory Management System</div>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+with c2:
+    st.markdown("<div class='kone-title'>KONE</div>", unsafe_allow_html=True)
+    st.markdown("<div class='kone-sub'>Inventory Management System</div>", unsafe_allow_html=True)
 
 st.divider()
 
 # ================= CONFIG =================
 SHEET_ID = "1PY9T5x0sqaDnHTZ5RoDx3LYGBu8bqOT7j4itdlC9yuE"
 SHEET_NAME = "Sheet1"
-
 EDITABLE_COLS = ["QTY", "LIFT NO", "CALL OUT", "DATE"]
 
 # ================= AUTH =================
@@ -106,7 +62,7 @@ scopes = [
 
 creds = Credentials.from_service_account_info(
     st.secrets["gcp_service_account"],
-    scopes=scopes,
+    scopes=scopes
 )
 
 client = gspread.authorize(creds)
@@ -120,28 +76,27 @@ if df.empty:
     st.error("Google Sheet is empty")
     st.stop()
 
-# Ensure editable columns exist
+# ================= FORCE EDITABLE COLS TO TEXT =================
 for col in EDITABLE_COLS:
     if col not in df.columns:
         df[col] = ""
+    df[col] = df[col].astype(str)   # 🔥 THIS FIXES LIFT NO
 
-# Google Sheet row number
+# Sheet row number
 df["_ROW"] = range(2, len(df) + 2)
 
 # ================= SEARCH =================
-search = st.text_input("🔍 Search Part No / Description / Box No")
+search = st.text_input("🔍 Search")
 
 view = df.copy()
 if search:
-    view = view[
-        view.apply(lambda r: search.lower() in str(r).lower(), axis=1)
-    ]
+    view = view[view.apply(lambda r: search.lower() in str(r).lower(), axis=1)]
 
 # ================= DATA EDITOR =================
 edited = st.data_editor(
     view,
-    use_container_width=True,
     hide_index=True,
+    use_container_width=True,
     disabled=[c for c in view.columns if c not in EDITABLE_COLS],
     key="editor"
 )
@@ -150,33 +105,34 @@ edited = st.data_editor(
 if st.button("💾 Save Changes"):
     updates = 0
 
-    for _, row in edited.iterrows():
-        row_no = int(row["_ROW"])
+    for _, r in edited.iterrows():
+        row_no = int(r["_ROW"])
         original = df[df["_ROW"] == row_no].iloc[0]
 
-        changed = False
         values = []
+        changed = False
 
         for col in df.columns:
             if col == "_ROW":
                 continue
 
-            new_val = "" if pd.isna(row[col]) else str(row[col])
-            old_val = "" if pd.isna(original[col]) else str(original[col])
+            new = "" if pd.isna(r[col]) else str(r[col])
+            old = "" if pd.isna(original[col]) else str(original[col])
 
-            if new_val != old_val:
+            if new != old:
                 changed = True
 
-            values.append(new_val)
+            values.append(new)
 
         if changed:
             sheet.update(f"A{row_no}", [values])
             updates += 1
 
     if updates:
-        st.success(f"✅ {updates} row(s) updated successfully")
+        st.success(f"✅ {updates} row(s) updated")
     else:
         st.info("No changes detected")
+
 
 
 
