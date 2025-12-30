@@ -35,7 +35,6 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
-
 # ================= CONFIG =================
 SHEET_ID = "1PY9T5x0sqaDnHTZ5RoDx3LYGBu8bqOT7j4itdlC9yuE"
 SHEET_NAME = "Sheet1"
