@@ -7,24 +7,25 @@ from datetime import date
 # ================= PAGE CONFIG =================
 st.set_page_config(page_title="KONE Inventory", layout="wide")
 
-# ================= HEADER (BLUE BLOCK) =================
-today = date.today().strftime("%d %b %Y")
-
+# ================= KONE BLOCK HEADER =================
 st.markdown(
-    f"""
-    <div style="
-        background-color:#003A8F;
-        padding:16px;
-        border-radius:8px;
-        text-align:center;
-        margin-bottom:20px;
-    ">
-        <h1 style="color:white; margin:0;">KONE</h1>
-        <p style="color:white; margin:4px 0 0 0; font-size:14px;">
-            Inventory Tracker • {today}
-        </p>
+    """
+    <div style="display:flex; justify-content:center; margin-bottom:6px;">
+        <div style="display:flex; gap:6px;">
+            <div style="background:#0052CC;color:white;font-weight:700;
+                        padding:12px 14px;border-radius:4px;font-size:20px;">K</div>
+            <div style="background:#0052CC;color:white;font-weight:700;
+                        padding:12px 14px;border-radius:4px;font-size:20px;">O</div>
+            <div style="background:#0052CC;color:white;font-weight:700;
+                        padding:12px 14px;border-radius:4px;font-size:20px;">N</div>
+            <div style="background:#0052CC;color:white;font-weight:700;
+                        padding:12px 14px;border-radius:4px;font-size:20px;">E</div>
+        </div>
     </div>
-    """,
+    <p style="text-align:center;color:#666;font-size:13px;margin-top:4px;">
+        Inventory Tracker • {date}
+    </p>
+    """.format(date=date.today().strftime("%d %b %Y")),
     unsafe_allow_html=True
 )
 
@@ -42,7 +43,7 @@ scopes = [
 
 creds = Credentials.from_service_account_info(
     st.secrets["gcp_service_account"],
-    scopes=scopes,
+    scopes=scopes
 )
 
 client = gspread.authorize(creds)
@@ -56,14 +57,6 @@ if df.empty:
     st.error("Google Sheet is empty")
     st.stop()
 
-# Ensure editable columns exist
-for col in EDITABLE_COLS:
-    if col not in df.columns:
-        df[col] = ""
-
-# Keep Google Sheet row index internally
-df["_ROW"] = range(2, len(df) + 2)
-
 # ================= SEARCH =================
 search = st.text_input("🔍 Search")
 
@@ -71,33 +64,26 @@ view = df.copy()
 if search:
     view = view[view.apply(lambda r: search.lower() in str(r).lower(), axis=1)]
 
-# ================= DATA EDITOR =================
-# 🔴 CRITICAL FIX:
-# Do NOT use disabled list (this breaks LIFT NO editing)
+# ================= DATA EDITOR (SAFE MODE) =================
 edited = st.data_editor(
-    view.drop(columns=["_ROW"]),
+    view,
     use_container_width=True,
     hide_index=True,
+    column_config={
+        "QTY": st.column_config.NumberColumn("QTY"),
+        "LIFT NO": st.column_config.TextColumn("LIFT NO"),
+        "CALL OUT": st.column_config.TextColumn("CALL OUT"),
+        "DATE": st.column_config.TextColumn("DATE"),
+    },
     key="editor"
 )
 
 # ================= SAVE =================
 if st.button("💾 Save Changes"):
-    updated = 0
+    sheet.clear()
+    sheet.update([edited.columns.tolist()] + edited.astype(str).values.tolist())
+    st.success("✅ Google Sheet updated successfully")
 
-    for i, row in edited.iterrows():
-        sheet_row = int(view.iloc[i]["_ROW"])
-
-        values = []
-        for col in df.columns:
-            if col == "_ROW":
-                continue
-            values.append("" if pd.isna(row[col]) else str(row[col]))
-
-        sheet.update(f"A{sheet_row}", [values])
-        updated += 1
-
-    st.success(f"✅ {updated} row(s) saved to Google Sheet")
 
 
 
