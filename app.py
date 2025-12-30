@@ -1,84 +1,108 @@
 import streamlit as st
 import pandas as pd
+import gspread
+from google.oauth2.service_account import Credentials
 from datetime import date
 
-# ---------------- PAGE CONFIG ----------------
-st.set_page_config(
-    page_title="KONE Inventory",
-    layout="wide"
-)
+# ================= PAGE CONFIG =================
+st.set_page_config(page_title="KONE Lift Inventory", layout="wide")
 
-# ---------------- KONE HEADER ----------------
+# ================= HEADER =================
 today = date.today().strftime("%d %b %Y")
 
 st.markdown(
     f"""
     <style>
-    .kone-header {{
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        margin-bottom: 25px;
+    .header {{
+        text-align: center;
+        margin-bottom: 20px;
     }}
 
-    .kone-logo {{
-        display: flex;
+    .kone {{
+        display: inline-flex;
         gap: 6px;
     }}
 
-    .kone-box {{
-        width: 60px;
-        height: 60px;
-        background-color: #005EB8;
+    .kone span {{
+        width: 55px;
+        height: 55px;
+        background: #005EB8;
         color: white;
-        font-size: 36px;
-        font-weight: 800;
+        font-size: 34px;
+        font-weight: bold;
         display: flex;
         align-items: center;
         justify-content: center;
         font-family: Arial, Helvetica, sans-serif;
     }}
 
-    .kone-date {{
-        margin-top: 8px;
+    .subtitle {{
+        margin-top: 10px;
+        font-size: 20px;
+        font-weight: 600;
+    }}
+
+    .date {{
         font-size: 14px;
         color: #555;
     }}
     </style>
 
-    <div class="kone-header">
-        <div class="kone-logo">
-            <div class="kone-box">K</div>
-            <div class="kone-box">O</div>
-            <div class="kone-box">N</div>
-            <div class="kone-box">E</div>
+    <div class="header">
+        <div class="kone">
+            <span>K</span><span>O</span><span>N</span><span>E</span>
         </div>
-        <div class="kone-date">{today}</div>
+        <div class="subtitle">Lift Inventory Tracker</div>
+        <div class="date">{today}</div>
     </div>
     """,
     unsafe_allow_html=True
 )
 
-# ---------------- LOAD DATA ----------------
-# Replace this with your Google Sheet loading logic if already present
-data = {
-    "PART NO": ["P-001", "P-002"],
-    "DESCRIPTION": ["Motor", "Panel"],
-    "BOX NO": ["B1", "B2"],
-    "QTY": [1, 2],
-    "LIFT NO": ["1111", "2222"],
-    "CALL OUT": ["3333", "4444"],
-    "DATE": ["2025-12-01", "2025-12-02"]
-}
+# ================= CONFIG =================
+SHEET_ID = "1PY9T5x0sqaDnHTZ5RoDx3LYGBu8bqOT7j4itdlC9yuE"
+SHEET_NAME = "Sheet1"
 
-df = pd.DataFrame(data)
+EDITABLE_COLS = ["QTY", "LIFT NO", "CALL OUT", "DATE"]
 
-# ---------------- DATA EDITOR ----------------
-edited = st.data_editor(
-    df,
+# ================= AUTH =================
+scopes = [
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/drive",
+]
+
+creds = Credentials.from_service_account_info(
+    st.secrets["gcp_service_account"],
+    scopes=scopes,
+)
+
+client = gspread.authorize(creds)
+sheet = client.open_by_key(SHEET_ID).worksheet(SHEET_NAME)
+
+# ================= LOAD DATA =================
+records = sheet.get_all_records()
+df = pd.DataFrame(records)
+
+if df.empty:
+    st.error("Google Sheet is empty")
+    st.stop()
+
+# Ensure editable columns exist
+for col in EDITABLE_COLS:
+    if col not in df.columns:
+        df[col] = ""
+
+# Add hidden row index (NOT displayed)
+df["_ROW"] = range(2, len(df) + 2)
+
+# ================= DATA EDITOR =================
+edited_df = st.data_editor(
+    df.drop(columns=["_ROW"]),
     use_container_width=True,
     hide_index=True,
+    disabled=[c for c in df.columns if c not in EDITABLE_COLS and c != "_ROW"],
     column_config={
+        "QTY": st.column_config.NumberColumn(),
         "LIFT NO": st.column_config.TextColumn(),
         "CALL OUT": st.column_config.TextColumn(),
         "DATE": st.column_config.TextColumn(),
@@ -86,9 +110,18 @@ edited = st.data_editor(
     key="editor"
 )
 
-# ---------------- SAVE PREVIEW ----------------
-st.write("### Live Data Preview")
-st.dataframe(edited, use_container_width=True)
+# ================= SAVE =================
+if st.button("💾 Save Changes"):
+    updates = 0
+
+    for i, row in edited_df.iterrows():
+        sheet_row = df.loc[i, "_ROW"]
+        values = ["" if pd.isna(v) else str(v) for v in row.tolist()]
+        sheet.update(f"A{sheet_row}", [values])
+        updates += 1
+
+    st.success(f"✅ {updates} row(s) updated successfully")
+
 
 
 
