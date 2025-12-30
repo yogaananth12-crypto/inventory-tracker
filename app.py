@@ -107,7 +107,7 @@ edited = st.data_editor(
         "DATE": st.column_config.TextColumn("DATE", width=130),
     },
     disabled=[c for c in COLUMN_ORDER if c not in EDITABLE],
-    frozen_columns=3,   # 👈 THIS LINE
+    frozen_columns=3,
     key="editor"
 )
 
