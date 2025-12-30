@@ -8,11 +8,13 @@ st.set_page_config(page_title="Inventory Tracker", layout="wide")
 
 st.markdown(
     """
-    <h1 style="text-align:center; margin-bottom:0;">KONE</h1>
-    <p style="text-align:center; margin-top:0; color:gray;">
-        Inventory Tracking System
-    </p>
-    <hr>
+    <div style="text-align:center; padding:12px 0;">
+        <h1 style="margin-bottom:5px;">KONE</h1>
+        <h4 style="color:gray; margin-top:0;">
+            Spare Parts Inventory Management System
+        </h4>
+        <hr style="margin-top:15px;">
+    </div>
     """,
     unsafe_allow_html=True
 )
