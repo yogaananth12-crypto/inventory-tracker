@@ -1,111 +1,131 @@
 import streamlit as st
 import pandas as pd
-import gspread
-from google.oauth2.service_account import Credentials
+import datetime
 
-# ================= PAGE CONFIG =================
-st.set_page_config(page_title="KONE Inventory", layout="wide")
+# ---------------- PAGE CONFIG ----------------
+st.set_page_config(
+    page_title="KONE Lift Inventory",
+    layout="wide"
+)
 
-# ================= HEADER =================
+# ---------------- KONE HEADER ----------------
+today = datetime.date.today().strftime("%d %b %Y")
+
 st.markdown(
-    """
-    <h1 style="text-align:center; color:#003A8F; margin-bottom:0;">KONE</h1>
-    <p style="text-align:center; margin-top:4px; color:#444;">
-        Inventory Management System
-    </p>
+    f"""
+    <style>
+    .kone-header {{
+        background: white;
+        padding: 20px;
+        border-radius: 14px;
+        margin-bottom: 18px;
+        box-shadow: 0 4px 14px rgba(0,0,0,0.12);
+        text-align: center;
+    }}
+
+    .kone-header img {{
+        height: 60px;
+    }}
+
+    .kone-title {{
+        font-size: 22px;
+        font-weight: 700;
+        color: #003A8F;
+        margin-top: 6px;
+    }}
+
+    .kone-date {{
+        font-size: 13px;
+        color: #6b7280;
+    }}
+    </style>
+
+    <div class="kone-header">
+        <img src="kone_logo.png">
+        <div class="kone-title">Lift Inventory Tracker</div>
+        <div class="kone-date">{today}</div>
+    </div>
     """,
     unsafe_allow_html=True
 )
 
-# ================= CONFIG =================
-SHEET_ID = "1PY9T5x0sqaDnHTZ5RoDx3LYGBu8bqOT7j4itdlC9yuE"
-SHEET_NAME = "Sheet1"
+# ---------------- LOAD DATA ----------------
+# Replace this with Google Sheet later
+# This structure MATCHES your sheet
 
-KEY_COL = "S.NO"
+data = {
+    "S.NO": [1, 2, 3],
+    "PART NO": ["PN-1001", "PN-1002", "PN-1003"],
+    "DESCRIPTION": ["Motor", "Panel", "Cable"],
+    "BOX NO": ["B1", "B2", "B3"],
+    "QTY": [2, 4, 1],
+    "LIFT NO": [9877666, 8947467, 8977655],
+    "CALL OUT": [23449876, 89787667, 21324556],
+    "DATE": [
+        datetime.date(2025, 12, 1),
+        datetime.date(2025, 12, 4),
+        datetime.date(2025, 12, 12),
+    ],
+}
 
-# ================= AUTH =================
-scopes = [
-    "https://www.googleapis.com/auth/spreadsheets",
-    "https://www.googleapis.com/auth/drive",
-]
+df = pd.DataFrame(data)
 
-creds = Credentials.from_service_account_info(
-    st.secrets["gcp_service_account"],
-    scopes=scopes,
-)
-
-client = gspread.authorize(creds)
-sheet = client.open_by_key(SHEET_ID).worksheet(SHEET_NAME)
-
-# ================= LOAD DATA =================
-df = pd.DataFrame(sheet.get_all_records())
-
-if df.empty:
-    st.error("Google Sheet is empty")
-    st.stop()
-
-# ---------- FORCE SAFE DATA TYPES ----------
-df["QTY"] = pd.to_numeric(df["QTY"], errors="coerce").fillna(0).astype(int)
-df["LIFT NO"] = df["LIFT NO"].astype(str)
-df["CALL OUT"] = pd.to_numeric(df["CALL OUT"], errors="coerce").fillna(0).astype(int)
-df["DATE"] = df["DATE"].astype(str)
-
-# ================= SEARCH =================
+# ---------------- SEARCH ----------------
 search = st.text_input("🔍 Search")
 
-view = df.copy()
 if search:
-    view = view[view.apply(lambda r: search.lower() in str(r).lower(), axis=1)]
+    df_view = df[df.apply(
+        lambda r: r.astype(str).str.contains(search, case=False).any(),
+        axis=1
+    )]
+else:
+    df_view = df.copy()
 
-# ================= DATA EDITOR =================
-edited = st.data_editor(
-    view,
+# ---------------- DATA EDITOR ----------------
+edited_df = st.data_editor(
+    df_view,
     use_container_width=True,
     hide_index=True,
     column_config={
-        "S.NO": st.column_config.TextColumn("S.NO", disabled=True),
-        "PART NO": st.column_config.TextColumn("PART NO", disabled=True),
-        "DESCRIPTION": st.column_config.TextColumn("DESCRIPTION", disabled=True),
-        "BOX NO": st.column_config.TextColumn("BOX NO", disabled=True),
-
-        "QTY": st.column_config.NumberColumn("QTY"),
-        "LIFT NO": st.column_config.TextColumn("LIFT NO"),
-        "CALL OUT": st.column_config.NumberColumn("CALL OUT"),
-        "DATE": st.column_config.TextColumn("DATE"),
+        "S.NO": st.column_config.NumberColumn(
+            "S.NO",
+            disabled=True
+        ),
+        "PART NO": st.column_config.TextColumn(
+            "PART NO",
+            disabled=True
+        ),
+        "DESCRIPTION": st.column_config.TextColumn(
+            "DESCRIPTION",
+            disabled=True
+        ),
+        "BOX NO": st.column_config.TextColumn(
+            "BOX NO",
+            disabled=True
+        ),
+        "QTY": st.column_config.NumberColumn(
+            "QTY",
+            min_value=0,
+            step=1
+        ),
+        "LIFT NO": st.column_config.NumberColumn(
+            "LIFT NO"
+        ),
+        "CALL OUT": st.column_config.NumberColumn(
+            "CALL OUT"
+        ),
+        "DATE": st.column_config.DateColumn(
+            "DATE"
+        ),
     },
     key="editor"
 )
 
-# ================= SAVE =================
-if st.button("💾 SAVE CHANGES"):
-    updated = 0
+# ---------------- SAVE BUTTON (PLACEHOLDER) ----------------
+st.markdown("---")
+if st.button("💾 Save Changes"):
+    st.success("Changes captured successfully (backend save can be added).")
 
-    for _, row in edited.iterrows():
-        s_no = int(row["S.NO"])
-        sheet_row = s_no + 1  # header row offset
-
-        original = df[df["S.NO"] == s_no].iloc[0]
-
-        new_values = []
-        changed = False
-
-        for col in df.columns:
-            new = "" if pd.isna(row[col]) else str(row[col])
-            old = "" if pd.isna(original[col]) else str(original[col])
-
-            if new != old:
-                changed = True
-
-            new_values.append(new)
-
-        if changed:
-            sheet.update(f"A{sheet_row}", [new_values])
-            updated += 1
-
-    if updated:
-        st.success(f"✅ {updated} row(s) saved")
-    else:
-        st.info("No changes detected")
 
 
 
