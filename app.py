@@ -17,12 +17,10 @@ st.markdown(
         text-align: center;
         margin-bottom: 20px;
     }}
-
     .kone {{
         display: inline-flex;
         gap: 6px;
     }}
-
     .kone span {{
         width: 55px;
         height: 55px;
@@ -35,13 +33,11 @@ st.markdown(
         justify-content: center;
         font-family: Arial, Helvetica, sans-serif;
     }}
-
     .subtitle {{
         margin-top: 10px;
         font-size: 20px;
         font-weight: 600;
     }}
-
     .date {{
         font-size: 14px;
         color: #555;
@@ -92,7 +88,7 @@ for col in EDITABLE_COLS:
     if col not in df.columns:
         df[col] = ""
 
-# Add hidden row index (NOT displayed)
+# Add hidden Google Sheet row number
 df["_ROW"] = range(2, len(df) + 2)
 
 # ================= DATA EDITOR =================
@@ -101,13 +97,7 @@ edited_df = st.data_editor(
     use_container_width=True,
     hide_index=True,
     disabled=[c for c in df.columns if c not in EDITABLE_COLS and c != "_ROW"],
-    column_config={
-        "QTY": st.column_config.NumberColumn(),
-        "LIFT NO": st.column_config.TextColumn(),
-        "CALL OUT": st.column_config.TextColumn(),
-        "DATE": st.column_config.TextColumn(),
-    },
-    key="editor"
+    key="editor",
 )
 
 # ================= SAVE =================
@@ -115,12 +105,12 @@ if st.button("💾 Save Changes"):
     updates = 0
 
     for i, row in edited_df.iterrows():
-        sheet_row = df.loc[i, "_ROW"]
+        row_no = df.loc[i, "_ROW"]
         values = ["" if pd.isna(v) else str(v) for v in row.tolist()]
-        sheet.update(f"A{sheet_row}", [values])
+        sheet.update(f"A{row_no}", [values])
         updates += 1
 
-    st.success(f"✅ {updates} row(s) updated successfully")
+    st.success(f"✅ {updates} row(s) saved successfully")
 
 
 
