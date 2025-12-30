@@ -7,48 +7,52 @@ from datetime import date
 # ================= PAGE CONFIG =================
 st.set_page_config(page_title="Inventory Tracker", layout="wide")
 
-today_str = date.today().strftime("%d %b %Y")
+today = date.today().strftime("%d %b %Y")
 
 # ================= HEADER =================
 st.markdown(f"""
 <style>
-.kone-header {{
-    display: flex;
-    gap: 6px;
-    margin-bottom: 6px;
+.header-wrapper {{
+    text-align: center;
+    margin-bottom: 14px;
 }}
+
+.kone-header {{
+    display: inline-flex;
+    gap: 6px;
+}}
+
 .kone-box {{
     background-color: #0071CE;
     color: white;
-    font-weight: 700;
+    font-weight: 800;
     font-size: 26px;
     padding: 6px 14px;
     border-radius: 4px;
 }}
+
 .subtitle {{
     font-size: 14px;
     color: #444;
-    margin-bottom: 14px;
+    margin-top: 6px;
 }}
 
-/* Ensure table text visible */
-[data-testid="stDataEditor"] {{
-    background-color: white !important;
-}}
 thead th, tbody td {{
     color: black !important;
     font-size: 14px;
 }}
 </style>
 
-<div class="kone-header">
-    <div class="kone-box">K</div>
-    <div class="kone-box">O</div>
-    <div class="kone-box">N</div>
-    <div class="kone-box">E</div>
-</div>
-<div class="subtitle">
-Inventory Tracker — {today_str}
+<div class="header-wrapper">
+    <div class="kone-header">
+        <div class="kone-box">K</div>
+        <div class="kone-box">O</div>
+        <div class="kone-box">N</div>
+        <div class="kone-box">E</div>
+    </div>
+    <div class="subtitle">
+        Inventory Tracker — {today}
+    </div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -80,16 +84,17 @@ if df.empty:
     st.error("Google Sheet is empty")
     st.stop()
 
-# Ensure editable columns exist
+# ================= FORCE TEXT FOR EDITABLE COLS (CRITICAL FIX) =================
 for col in EDITABLE_COLS:
     if col not in df.columns:
         df[col] = ""
+    df[col] = df[col].astype(str)
 
-# Google Sheet row index (hidden)
+# Hidden Google Sheet row index
 df["_ROW"] = range(2, len(df) + 2)
 
 # ================= SEARCH =================
-search = st.text_input("🔍 Search", placeholder="Search part no, description, box no...")
+search = st.text_input("🔍 Search")
 
 view = df.copy()
 if search:
@@ -97,7 +102,7 @@ if search:
 
 # ================= DATA EDITOR =================
 edited = st.data_editor(
-    view,
+    view.drop(columns=["_ROW"]),
     hide_index=True,
     use_container_width=True,
     disabled=[c for c in view.columns if c not in EDITABLE_COLS],
@@ -108,9 +113,9 @@ edited = st.data_editor(
 if st.button("💾 Save Changes"):
     updated = 0
 
-    for _, row in edited.iterrows():
-        row_no = int(row["_ROW"])
-        original = df[df["_ROW"] == row_no].iloc[0]
+    for i, row in edited.iterrows():
+        sheet_row = df.iloc[i]["_ROW"]
+        original = df.iloc[i]
 
         values = []
         changed = False
@@ -128,13 +133,14 @@ if st.button("💾 Save Changes"):
             values.append(new)
 
         if changed:
-            sheet.update(f"A{row_no}", [values])
+            sheet.update(f"A{sheet_row}", [values])
             updated += 1
 
     if updated:
-        st.success(f"✅ {updated} row(s) updated")
+        st.success(f"✅ {updated} row(s) updated in Google Sheet")
     else:
         st.info("No changes detected")
+
 
 
 
