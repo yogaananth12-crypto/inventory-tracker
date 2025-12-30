@@ -5,51 +5,32 @@ from google.oauth2.service_account import Credentials
 from datetime import date
 
 # ================= PAGE CONFIG =================
-st.set_page_config(page_title="KONE Lift Inventory", layout="wide")
+st.set_page_config(page_title="KONE Inventory", layout="wide")
 
 # ================= HEADER =================
 today = date.today().strftime("%d %b %Y")
 
 st.markdown(
     f"""
-    <style>
-    .header {{
-        text-align: center;
-        margin-bottom: 20px;
-    }}
-    .kone {{
-        display: inline-flex;
-        gap: 6px;
-    }}
-    .kone span {{
-        width: 50px;
-        height: 50px;
-        background: #005EB8;
-        color: white;
-        font-size: 32px;
-        font-weight: bold;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-family: Arial, Helvetica, sans-serif;
-    }}
-    .subtitle {{
-        margin-top: 10px;
-        font-size: 20px;
-        font-weight: 600;
-    }}
-    .date {{
-        font-size: 14px;
-        color: #555;
-    }}
-    </style>
-
-    <div class="header">
-        <div class="kone">
-            <span>K</span><span>O</span><span>N</span><span>E</span>
+    <div style="text-align:center; margin-bottom:15px;">
+        <div style="
+            display:inline-block;
+            background:#005EB8;
+            color:white;
+            font-weight:800;
+            font-size:34px;
+            padding:10px 30px;
+            border-radius:6px;
+            letter-spacing:2px;
+        ">
+            KONE
         </div>
-        <div class="subtitle">Lift Inventory Tracker</div>
-        <div class="date">{today}</div>
+        <div style="font-size:18px; margin-top:6px; font-weight:600;">
+            Lift Inventory Tracker
+        </div>
+        <div style="font-size:14px; color:gray;">
+            {today}
+        </div>
     </div>
     """,
     unsafe_allow_html=True
@@ -64,12 +45,12 @@ EDITABLE_COLS = ["QTY", "LIFT NO", "CALL OUT", "DATE"]
 # ================= AUTH =================
 scopes = [
     "https://www.googleapis.com/auth/spreadsheets",
-    "https://www.googleapis.com/auth/drive",
+    "https://www.googleapis.com/auth/drive"
 ]
 
 creds = Credentials.from_service_account_info(
     st.secrets["gcp_service_account"],
-    scopes=scopes,
+    scopes=scopes
 )
 
 client = gspread.authorize(creds)
@@ -88,16 +69,16 @@ for col in EDITABLE_COLS:
     if col not in df.columns:
         df[col] = ""
 
-# FORCE LIFT NO AS TEXT (DO NOT REMOVE)
-df["LIFT NO"] = df["LIFT NO"].astype(str)
+# Add hidden row index (for saving only)
+df["_ROW"] = range(2, len(df) + 2)
 
-# ================= 🔍 SEARCH BAR (ONLY ADDITION) =================
-search = st.text_input("🔍 Search")
+# ================= SEARCH =================
+search = st.text_input("🔍 Search parts")
 
 view = df.copy()
 if search:
     view = view[
-        view.apply(lambda r: search.lower() in r.astype(str).str.lower().to_string(), axis=1)
+        view.apply(lambda r: search.lower() in str(r).lower(), axis=1)
     ]
 
 # ================= DATA EDITOR =================
@@ -105,46 +86,42 @@ edited_df = st.data_editor(
     view.drop(columns=["_ROW"]),
     use_container_width=True,
     hide_index=True,
-    disabled=[c for c in df.columns if c not in EDITABLE_COLS and c != "_ROW"],
-    key="editor",
+    disabled=[c for c in view.columns if c not in EDITABLE_COLS],
+    key="editor"
 )
 
 # ================= SAVE =================
 if st.button("💾 Save Changes"):
-    updates = []
+    updates = 0
 
-    for idx, row in edited_df.iterrows():
-        # Google Sheet row number ( +2 because header + 0-index )
-        row_no = idx + 2
+    for i in range(len(edited_df)):
+        original = df.iloc[i]
+        edited = edited_df.iloc[i]
 
-        original = df.iloc[idx]
-
-        row_changed = False
-        values = []
+        changed = False
+        row_values = []
 
         for col in df.columns:
-            new_val = row[col]
-            old_val = original[col]
+            if col == "_ROW":
+                continue
 
-            new_val = "" if pd.isna(new_val) else str(new_val).strip()
-            old_val = "" if pd.isna(old_val) else str(old_val).strip()
+            new_val = "" if pd.isna(edited[col]) else str(edited[col])
+            old_val = "" if pd.isna(original[col]) else str(original[col])
 
-            if col in EDITABLE_COLS and new_val != old_val:
-                row_changed = True
+            if new_val != old_val:
+                changed = True
 
-            values.append(new_val)
+            row_values.append(new_val)
 
-        if row_changed:
-            updates.append({
-                "range": f"A{row_no}",
-                "values": [values]
-            })
+        if changed:
+            sheet.update(f"A{int(original['_ROW'])}", [row_values])
+            updates += 1
 
     if updates:
-        sheet.batch_update(updates)
-        st.success(f"✅ {len(updates)} row(s) saved")
+        st.success(f"✅ {updates} row(s) updated successfully")
     else:
-        st.info("No changes to save")
+        st.info("No changes detected")
+
 
 
 
