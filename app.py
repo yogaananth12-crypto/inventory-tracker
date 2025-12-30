@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import gspread
 from google.oauth2.service_account import Credentials
+from PIL import Image
 
 # ================= PAGE CONFIG =================
 st.set_page_config(
@@ -10,8 +11,8 @@ st.set_page_config(
 )
 
 # ================= BRAND COLORS =================
-KONE_BLUE = "#005EB8"   # Official strong KONE blue
-KONE_DARK = "#003A8F"   # Darker accent
+KONE_BLUE = "#005EB8"
+KONE_DARK = "#003A8F"
 
 # ================= STYLES =================
 st.markdown(
@@ -22,15 +23,19 @@ st.markdown(
         }}
 
         .kone-header {{
-            text-align: center;
-            padding: 14px 0 24px 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            padding: 14px 0 18px 0;
         }}
 
         .kone-title {{
-            font-size: 42px;
+            font-size: 40px;
             font-weight: 900;
             color: {KONE_BLUE};
             letter-spacing: 1px;
+            line-height: 1;
         }}
 
         .kone-subtitle {{
@@ -40,7 +45,22 @@ st.markdown(
             margin-top: 4px;
         }}
 
-        /* Data editor readability */
+        /* Save button */
+        div.stButton > button {{
+            background-color: {KONE_BLUE};
+            color: white;
+            font-weight: 700;
+            padding: 0.6rem 1.4rem;
+            border-radius: 8px;
+            border: none;
+        }}
+
+        div.stButton > button:hover {{
+            background-color: {KONE_DARK};
+            color: white;
+        }}
+
+        /* Data editor font */
         div[data-testid="stDataEditor"] {{
             font-size: 16px;
         }}
@@ -50,15 +70,25 @@ st.markdown(
 )
 
 # ================= HEADER =================
-st.markdown(
-    """
-    <div class="kone-header">
-        <div class="kone-title">KONE</div>
-        <div class="kone-subtitle">Inventory Management System</div>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
+col1, col2 = st.columns([1, 4])
+
+with col1:
+    try:
+        logo = Image.open("kone_logo.png")
+        st.image(logo, width=90)
+    except:
+        pass
+
+with col2:
+    st.markdown(
+        """
+        <div>
+            <div class="kone-title">KONE</div>
+            <div class="kone-subtitle">Inventory Management System</div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
 st.divider()
 
@@ -147,7 +177,6 @@ if st.button("💾 Save Changes"):
         st.success(f"✅ {updates} row(s) updated successfully")
     else:
         st.info("No changes detected")
-
 
 
 
