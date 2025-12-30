@@ -22,11 +22,11 @@ st.markdown(
         gap: 6px;
     }}
     .kone span {{
-        width: 55px;
-        height: 55px;
+        width: 50px;
+        height: 50px;
         background: #005EB8;
         color: white;
-        font-size: 34px;
+        font-size: 32px;
         font-weight: bold;
         display: flex;
         align-items: center;
@@ -88,7 +88,10 @@ for col in EDITABLE_COLS:
     if col not in df.columns:
         df[col] = ""
 
-# Add hidden Google Sheet row number
+# 🔴 IMPORTANT FIX — FORCE LIFT NO TO TEXT
+df["LIFT NO"] = df["LIFT NO"].astype(str)
+
+# Add hidden row index
 df["_ROW"] = range(2, len(df) + 2)
 
 # ================= DATA EDITOR =================
