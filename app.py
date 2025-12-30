@@ -7,15 +7,27 @@ from google.oauth2.service_account import Credentials
 st.set_page_config(page_title="KONE Inventory", layout="wide")
 
 # ================= HEADER (BULLETPROOF) =================
-st.markdown(
-    "<h1 style='color:#003A8F; text-align:center; font-weight:900;'>KONE</h1>",
-    unsafe_allow_html=True
-)
-st.markdown(
-    "<h3 style='text-align:center;'>Lift Inventory Tracker</h3>",
-    unsafe_allow_html=True
-)
-st.markdown("---")
+st.markdown("""
+<div style="
+    background:#003A8F;
+    padding:22px;
+    border-radius:14px;
+    text-align:center;
+    margin-bottom:20px;
+">
+    <span style="
+        color:white;
+        font-size:42px;
+        font-weight:900;
+        letter-spacing:8px;
+    ">KONE</span>
+</div>
+
+<h3 style="text-align:center; margin-top:0;">
+    Lift Inventory Tracker
+</h3>
+<hr>
+""", unsafe_allow_html=True)
 
 # ================= CONFIG =================
 SHEET_ID = "1PY9T5x0sqaDnHTZ5RoDx3LYGBu8bqOT7j4itdlC9yuE"
