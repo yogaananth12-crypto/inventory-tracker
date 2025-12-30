@@ -2,17 +2,31 @@ import streamlit as st
 import pandas as pd
 import gspread
 from google.oauth2.service_account import Credentials
+import base64
 
 # ================= PAGE CONFIG =================
 st.set_page_config(page_title="KONE Inventory", layout="wide")
 
-# ================= HEADER (CLEAR KONE LOGO) =================
-st.image(
-    "https://upload.wikimedia.org/wikipedia/commons/6/6b/KONE_logo.svg",
-    width=220
-)
+# ================= KONE HEADER (ALWAYS VISIBLE) =================
+KONE_PNG_BASE64 = """
+iVBORw0KGgoAAAANSUhEUgAAAZAAAABQCAYAAABZ0+FZAAAACXBIWXMAAAsSAAALEgHS3X78
+AAAgAElEQVR4nO3deZBcZ33/8c9yZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dn
+Z2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dn
+Z2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dn
+Z2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dn
+Z2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dn
+Z2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dn
+Z2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dn
+"""
 
-st.markdown("<br>", unsafe_allow_html=True)
+st.markdown(
+    f"""
+    <div style="text-align:center; padding:20px 0;">
+        <img src="data:image/png;base64,{KONE_PNG_BASE64}" width="200">
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 
 # ================= CONFIG =================
 SHEET_ID = "1PY9T5x0sqaDnHTZ5RoDx3LYGBu8bqOT7j4itdlC9yuE"
@@ -42,7 +56,7 @@ if df.empty:
     st.error("Google Sheet is empty")
     st.stop()
 
-# Ensure editable columns exist & FORCE STRING TYPE
+# FORCE STRING TYPE FOR EDITABLE COLUMNS (CRITICAL)
 for col in EDITABLE_COLS:
     if col not in df.columns:
         df[col] = ""
@@ -57,7 +71,7 @@ if search:
         view.apply(lambda r: search.lower() in str(r).lower(), axis=1)
     ]
 
-# ================= DATA EDITOR (NO LOCKING) =================
+# ================= DATA EDITOR =================
 edited = st.data_editor(
     view,
     use_container_width=True,
@@ -91,6 +105,7 @@ if st.button("💾 Save Changes"):
         updated += 1
 
     st.success(f"✅ {updated} row(s) updated successfully")
+
 
 
 
