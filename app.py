@@ -3,55 +3,54 @@ import pandas as pd
 from datetime import date
 
 # ---------------- PAGE CONFIG ----------------
-st.set_page_config(layout="wide")
+st.set_page_config(
+    page_title="KONE Lift Inventory",
+    layout="wide"
+)
 
-# ---------------- HEADER ----------------
-today = date.today().strftime("%d %b %Y")
+# ---------------- HEADER (STREAMLIT SAFE) ----------------
+st.markdown("##")
 
-st.markdown("""
-<style>
-.kone-row {
-    display:flex;
-    justify-content:center;
-    gap:6px;
-    margin-top:20px;
-}
-.kone-box {
-    background:#0047BA;
-    color:white;
-    font-size:34px;
-    font-weight:900;
-    width:58px;
-    height:58px;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    border-radius:4px;
-}
-</style>
-""", unsafe_allow_html=True)
+col1, col2, col3, col4 = st.columns([1,1,1,1])
 
-st.markdown(f"""
-<div class="kone-row">
-  <div class="kone-box">K</div>
-  <div class="kone-box">O</div>
-  <div class="kone-box">N</div>
-  <div class="kone-box">E</div>
-</div>
+with col1:
+    st.markdown(
+        "<div style='background:#0047BA;color:white;"
+        "font-size:36px;font-weight:900;"
+        "text-align:center;padding:18px;border-radius:6px;'>K</div>",
+        unsafe_allow_html=True
+    )
 
-<h3 style="text-align:center; margin-top:10px;">
-Lift Inventory Tracker
-</h3>
+with col2:
+    st.markdown(
+        "<div style='background:#0047BA;color:white;"
+        "font-size:36px;font-weight:900;"
+        "text-align:center;padding:18px;border-radius:6px;'>O</div>",
+        unsafe_allow_html=True
+    )
 
-<p style="text-align:center; color:gray;">
-{today}
-</p>
+with col3:
+    st.markdown(
+        "<div style='background:#0047BA;color:white;"
+        "font-size:36px;font-weight:900;"
+        "text-align:center;padding:18px;border-radius:6px;'>N</div>",
+        unsafe_allow_html=True
+    )
 
-<hr>
-""", unsafe_allow_html=True)
+with col4:
+    st.markdown(
+        "<div style='background:#0047BA;color:white;"
+        "font-size:36px;font-weight:900;"
+        "text-align:center;padding:18px;border-radius:6px;'>E</div>",
+        unsafe_allow_html=True
+    )
 
-# ---------------- SAMPLE DATA (REPLACE WITH GOOGLE SHEET LATER) ----------------
-data = {
+st.markdown("### Lift Inventory Tracker")
+st.caption(date.today().strftime("%d %B %Y"))
+st.divider()
+
+# ---------------- DATA ----------------
+df = pd.DataFrame({
     "S.NO": [1, 2],
     "PART NO": ["P-001", "P-002"],
     "DESCRIPTION": ["Motor", "Panel"],
@@ -60,9 +59,7 @@ data = {
     "LIFT NO": [1111, 2222],
     "CALL OUT": [3333, 4444],
     "DATE": ["2025-12-01", "2025-12-02"]
-}
-
-df = pd.DataFrame(data)
+})
 
 # ---------------- DATA EDITOR ----------------
 edited_df = st.data_editor(
@@ -72,8 +69,8 @@ edited_df = st.data_editor(
     key="editor"
 )
 
-# ---------------- DEBUG CONFIRMATION ----------------
-st.success("✅ If you can edit ALL columns, this version is correct.")
+st.success("✅ Header visible + All columns editable")
+
 
 
 
