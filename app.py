@@ -7,25 +7,42 @@ from google.oauth2.service_account import Credentials
 st.set_page_config(page_title="KONE Inventory", layout="wide")
 
 # ================= HEADER (BULLETPROOF) =================
-st.markdown("""
+from datetime import date
+today = date.today().strftime("%d %b %Y")
+
+st.markdown(f"""
 <div style="
-    background:#003A8F;
-    padding:22px;
-    border-radius:14px;
-    text-align:center;
-    margin-bottom:20px;
+    display:flex;
+    justify-content:center;
+    gap:8px;
+    margin-top:10px;
 ">
-    <span style="
-        color:white;
-        font-size:42px;
-        font-weight:900;
-        letter-spacing:8px;
-    ">KONE</span>
+    <div style="background:#0047BA; color:white; font-weight:900; font-size:36px;
+                width:60px; height:60px; display:flex; align-items:center; justify-content:center;">
+        K
+    </div>
+    <div style="background:#0047BA; color:white; font-weight:900; font-size:36px;
+                width:60px; height:60px; display:flex; align-items:center; justify-content:center;">
+        O
+    </div>
+    <div style="background:#0047BA; color:white; font-weight:900; font-size:36px;
+                width:60px; height:60px; display:flex; align-items:center; justify-content:center;">
+        N
+    </div>
+    <div style="background:#0047BA; color:white; font-weight:900; font-size:36px;
+                width:60px; height:60px; display:flex; align-items:center; justify-content:center;">
+        E
+    </div>
 </div>
 
-<h3 style="text-align:center; margin-top:0;">
+<h3 style="text-align:center; margin-top:12px;">
     Lift Inventory Tracker
 </h3>
+
+<p style="text-align:center; color:gray; margin-top:-6px;">
+    {today}
+</p>
+
 <hr>
 """, unsafe_allow_html=True)
 
