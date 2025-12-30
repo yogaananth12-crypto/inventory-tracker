@@ -88,15 +88,24 @@ for col in EDITABLE_COLS:
     if col not in df.columns:
         df[col] = ""
 
-# 🔴 IMPORTANT FIX — FORCE LIFT NO TO TEXT
+# FORCE LIFT NO AS TEXT (DO NOT REMOVE)
 df["LIFT NO"] = df["LIFT NO"].astype(str)
 
 # Add hidden row index
 df["_ROW"] = range(2, len(df) + 2)
 
+# ================= 🔍 SEARCH BAR (ONLY ADDITION) =================
+search = st.text_input("🔍 Search")
+
+view = df.copy()
+if search:
+    view = view[
+        view.apply(lambda r: search.lower() in r.astype(str).str.lower().to_string(), axis=1)
+    ]
+
 # ================= DATA EDITOR =================
 edited_df = st.data_editor(
-    df.drop(columns=["_ROW"]),
+    view.drop(columns=["_ROW"]),
     use_container_width=True,
     hide_index=True,
     disabled=[c for c in df.columns if c not in EDITABLE_COLS and c != "_ROW"],
@@ -108,12 +117,13 @@ if st.button("💾 Save Changes"):
     updates = 0
 
     for i, row in edited_df.iterrows():
-        row_no = df.loc[i, "_ROW"]
+        row_no = view.loc[i, "_ROW"]
         values = ["" if pd.isna(v) else str(v) for v in row.tolist()]
         sheet.update(f"A{row_no}", [values])
         updates += 1
 
     st.success(f"✅ {updates} row(s) saved successfully")
+
 
 
 
