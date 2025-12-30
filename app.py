@@ -94,7 +94,6 @@ view = view[COLUMN_ORDER + ["_ROW"]]
 
 # ================= DATA EDITOR =================
 edited = st.data_editor(
-   edited = st.data_editor(
     view,
     use_container_width=True,
     hide_index=True,
