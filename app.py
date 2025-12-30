@@ -7,45 +7,12 @@ from google.oauth2.service_account import Credentials
 st.set_page_config(page_title="KONE Inventory", layout="wide")
 
 # ================= HEADER (BULLETPROOF) =================
-from datetime import date
-
-today = date.today().strftime("%d %b %Y")
-
 st.markdown("""
-<style>
-.kone-box {
-    background:#0047BA;
-    color:white;
-    font-weight:900;
-    font-size:38px;
-    width:64px;
-    height:64px;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-}
-</style>
-""", unsafe_allow_html=True)
-
-st.markdown(f"""
-<div style="display:flex; justify-content:center; gap:8px; margin-top:20px;">
-  <div class="kone-box">K</div>
-  <div class="kone-box">O</div>
-  <div class="kone-box">N</div>
-  <div class="kone-box">E</div>
+<div style="text-align:center;margin-bottom:10px">
+  <h1 style="color:#005EB8;font-weight:900;letter-spacing:6px;">KONE</h1>
+  <div style="font-size:18px;font-weight:600;">Lift Inventory Tracker</div>
 </div>
-
-<h3 style="text-align:center; margin-top:12px;">
-Lift Inventory Tracker
-</h3>
-
-<p style="text-align:center; color:gray;">
-{today}
-</p>
-
-<hr>
 """, unsafe_allow_html=True)
-
 
 # ================= CONFIG =================
 SHEET_ID = "1PY9T5x0sqaDnHTZ5RoDx3LYGBu8bqOT7j4itdlC9yuE"
