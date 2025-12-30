@@ -120,22 +120,27 @@ if st.button("💾 Save Changes"):
         row_no = int(row["_ROW"])
         original = df[df["_ROW"] == row_no].iloc[0]
 
-        changed = False
+        row_changed = False
         values = []
 
         for col in df.columns:
             if col == "_ROW":
                 continue
 
-            new_val = "" if pd.isna(row[col]) else str(row[col])
-            old_val = "" if pd.isna(original[col]) else str(original[col])
+            new_val = row[col]
+            old_val = original[col]
 
-            if new_val != old_val:
-                changed = True
+            # normalize values
+            new_val = "" if pd.isna(new_val) else str(new_val).strip()
+            old_val = "" if pd.isna(old_val) else str(old_val).strip()
+
+            # 🔑 compare ONLY editable columns
+            if col in EDITABLE_COLS and new_val != old_val:
+                row_changed = True
 
             values.append(new_val)
 
-        if changed:
+        if row_changed:
             updates.append({
                 "range": f"A{row_no}",
                 "values": [values]
@@ -143,7 +148,7 @@ if st.button("💾 Save Changes"):
 
     if updates:
         sheet.batch_update(updates)
-        st.success(f"✅ {len(updates)} row(s) saved faster")
+        st.success(f"✅ {len(updates)} row(s) saved")
     else:
         st.info("No changes to save")
 
