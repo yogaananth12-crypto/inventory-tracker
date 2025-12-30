@@ -9,9 +9,11 @@ st.set_page_config(
     layout="wide"
 )
 
-# ================= BRANDING =================
-KONE_BLUE = "#003A8F"
+# ================= BRAND COLORS =================
+KONE_BLUE = "#005EB8"   # Official strong KONE blue
+KONE_DARK = "#003A8F"   # Darker accent
 
+# ================= STYLES =================
 st.markdown(
     f"""
     <style>
@@ -21,22 +23,24 @@ st.markdown(
 
         .kone-header {{
             text-align: center;
-            padding: 10px 0 20px 0;
+            padding: 14px 0 24px 0;
         }}
 
         .kone-title {{
-            font-size: 40px;
-            font-weight: 800;
+            font-size: 42px;
+            font-weight: 900;
             color: {KONE_BLUE};
-            margin-bottom: 5px;
+            letter-spacing: 1px;
         }}
 
         .kone-subtitle {{
             font-size: 18px;
-            color: #444;
+            font-weight: 600;
+            color: {KONE_DARK};
+            margin-top: 4px;
         }}
 
-        /* Make data editor text slightly larger */
+        /* Data editor readability */
         div[data-testid="stDataEditor"] {{
             font-size: 16px;
         }}
@@ -55,9 +59,6 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
-
-# OPTIONAL LOGO (uncomment if you upload logo.png)
-# st.image("logo.png", width=120)
 
 st.divider()
 
@@ -94,7 +95,7 @@ for col in EDITABLE_COLS:
     if col not in df.columns:
         df[col] = ""
 
-# Stable Google Sheet row number
+# Google Sheet row number
 df["_ROW"] = range(2, len(df) + 2)
 
 # ================= SEARCH =================
@@ -146,6 +147,7 @@ if st.button("💾 Save Changes"):
         st.success(f"✅ {updates} row(s) updated successfully")
     else:
         st.info("No changes detected")
+
 
 
 
