@@ -9,8 +9,23 @@ st.set_page_config(page_title="KONE Inventory", layout="wide")
 # ================= HEADER (BULLETPROOF) =================
 st.markdown("""
 <div style="text-align:center;margin-bottom:10px">
-  <h1 style="color:#005EB8;font-weight:900;letter-spacing:6px;">KONE</h1>
-  <div style="font-size:18px;font-weight:600;">Lift Inventory Tracker</div>
+  <div style="display:flex;justify-content:center;gap:6px">
+    <div style="width:50px;height:50px;background:#005EB8;color:white;
+                font-size:30px;font-weight:900;display:flex;
+                align-items:center;justify-content:center;border-radius:6px;">K</div>
+    <div style="width:50px;height:50px;background:#005EB8;color:white;
+                font-size:30px;font-weight:900;display:flex;
+                align-items:center;justify-content:center;border-radius:6px;">O</div>
+    <div style="width:50px;height:50px;background:#005EB8;color:white;
+                font-size:30px;font-weight:900;display:flex;
+                align-items:center;justify-content:center;border-radius:6px;">N</div>
+    <div style="width:50px;height:50px;background:#005EB8;color:white;
+                font-size:30px;font-weight:900;display:flex;
+                align-items:center;justify-content:center;border-radius:6px;">E</div>
+  </div>
+  <div style="font-size:18px;font-weight:700;margin-top:4px">
+    Spare Parts Inventory
+  </div>
 </div>
 """, unsafe_allow_html=True)
 
