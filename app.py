@@ -12,48 +12,30 @@ today = date.today().strftime("%d %b %Y")
 
 st.markdown(
     f"""
-    <style>
-    .header {{
-        text-align: center;
-        margin-bottom: 20px;
-    }}
-    .kone {{
-        display: inline-flex;
-        gap: 6px;
-    }}
-    .kone span {{
-        width: 50px;
-        height: 50px;
-        background: #005EB8;
-        color: white;
-        font-size: 32px;
-        font-weight: bold;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-family: Arial, Helvetica, sans-serif;
-    }}
-    .subtitle {{
-        margin-top: 10px;
-        font-size: 20px;
-        font-weight: 600;
-    }}
-    .date {{
-        font-size: 14px;
-        color: #555;
-    }}
-    </style>
-
-    <div class="header">
-        <div class="kone">
-            <span>K</span><span>O</span><span>N</span><span>E</span>
+    <div style="text-align:center; margin-bottom:15px;">
+        <div style="
+            display:inline-block;
+            background:#005EB8;
+            color:white;
+            font-weight:800;
+            font-size:34px;
+            padding:10px 30px;
+            border-radius:6px;
+            letter-spacing:2px;
+        ">
+            KONE
         </div>
-        <div class="subtitle">Lift Inventory Tracker</div>
-        <div class="date">{today}</div>
+        <div style="font-size:18px; margin-top:6px; font-weight:600;">
+            Lift Inventory Tracker
+        </div>
+        <div style="font-size:14px; color:gray;">
+            {today}
+        </div>
     </div>
     """,
     unsafe_allow_html=True
 )
+
 # ================= CONFIG =================
 SHEET_ID = "1PY9T5x0sqaDnHTZ5RoDx3LYGBu8bqOT7j4itdlC9yuE"
 SHEET_NAME = "Sheet1"
@@ -82,16 +64,17 @@ if df.empty:
     st.error("Google Sheet is empty")
     st.stop()
 
-# Ensure editable columns exist
-for col in EDITABLE_COLS:
-    if col not in df.columns:
-        df[col] = ""
+# Ensure editable columns exist + FORCE STRING
+df["LIFT NO"] = df["LIFT NO"].astype(str)
+df["CALL OUT"] = df["CALL OUT"].astype(str)
+df["DATE"] = df["DATE"].astype(str)
+df["QTY"] = pd.to_numeric(df["QTY"], errors="coerce").fillna(0)
 
-# Add hidden row index (for saving only)
+# Hidden row index for saving
 df["_ROW"] = range(2, len(df) + 2)
 
 # ================= SEARCH =================
-search = st.text_input("🔍 Search parts")
+search = st.text_input("🔍 Search")
 
 view = df.copy()
 if search:
@@ -104,11 +87,17 @@ edited_df = st.data_editor(
     view.drop(columns=["_ROW"]),
     use_container_width=True,
     hide_index=True,
-    disabled=[c for c in view.columns if c not in EDITABLE_COLS],
-    key="editor"
+    key="editor",
+    column_config={
+        "QTY": st.column_config.NumberColumn("QTY"),
+        "LIFT NO": st.column_config.TextColumn("LIFT NO"),
+        "CALL OUT": st.column_config.TextColumn("CALL OUT"),
+        "DATE": st.column_config.TextColumn("DATE"),
+    },
+    disabled=[c for c in view.columns if c not in EDITABLE_COLS]
 )
 
-# ================= SAVE =================
+# ================= SAVE (FAST) =================
 if st.button("💾 Save Changes"):
     updates = 0
 
@@ -116,29 +105,16 @@ if st.button("💾 Save Changes"):
         original = df.iloc[i]
         edited = edited_df.iloc[i]
 
-        changed = False
-        row_values = []
-
-        for col in df.columns:
-            if col == "_ROW":
-                continue
-
-            new_val = "" if pd.isna(edited[col]) else str(edited[col])
-            old_val = "" if pd.isna(original[col]) else str(original[col])
-
-            if new_val != old_val:
-                changed = True
-
-            row_values.append(new_val)
-
-        if changed:
-            sheet.update(f"A{int(original['_ROW'])}", [row_values])
+        if not edited.equals(original.drop("_ROW")):
+            values = ["" if pd.isna(v) else str(v) for v in edited]
+            sheet.update(f"A{int(original['_ROW'])}", [values])
             updates += 1
 
     if updates:
         st.success(f"✅ {updates} row(s) updated successfully")
     else:
         st.info("No changes detected")
+
 
 
 
