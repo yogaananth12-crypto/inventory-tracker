@@ -2,31 +2,47 @@ import streamlit as st
 import pandas as pd
 import gspread
 from google.oauth2.service_account import Credentials
-import base64
 
 # ================= PAGE CONFIG =================
 st.set_page_config(page_title="KONE Inventory", layout="wide")
 
-# ================= KONE HEADER (ALWAYS VISIBLE) =================
-KONE_PNG_BASE64 = """
-iVBORw0KGgoAAAANSUhEUgAAAZAAAABQCAYAAABZ0+FZAAAACXBIWXMAAAsSAAALEgHS3X78
-AAAgAElEQVR4nO3deZBcZ33/8c9yZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dn
-Z2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dn
-Z2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dn
-Z2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dn
-Z2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dn
-Z2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dn
-Z2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dn
-"""
+# ================= KONE HEADER (TEXT LOGO – ALWAYS VISIBLE) =================
+st.markdown("""
+<style>
+.kone-header {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    margin: 25px 0 10px 0;
+}
+.kone-box {
+    background-color: #003A8F;
+    color: white;
+    font-size: 36px;
+    font-weight: 800;
+    width: 55px;
+    height: 55px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+}
+.subtitle {
+    text-align: center;
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 20px;
+}
+</style>
 
-st.markdown(
-    f"""
-    <div style="text-align:center; padding:20px 0;">
-        <img src="data:image/png;base64,{KONE_PNG_BASE64}" width="200">
-    </div>
-    """,
-    unsafe_allow_html=True
-)
+<div class="kone-header">
+  <div class="kone-box">K</div>
+  <div class="kone-box">O</div>
+  <div class="kone-box">N</div>
+  <div class="kone-box">E</div>
+</div>
+<div class="subtitle">Lift Inventory Tracker</div>
+""", unsafe_allow_html=True)
 
 # ================= CONFIG =================
 SHEET_ID = "1PY9T5x0sqaDnHTZ5RoDx3LYGBu8bqOT7j4itdlC9yuE"
@@ -56,7 +72,7 @@ if df.empty:
     st.error("Google Sheet is empty")
     st.stop()
 
-# FORCE STRING TYPE FOR EDITABLE COLUMNS (CRITICAL)
+# FORCE TEXT TYPE FOR EDITABLE COLUMNS (VERY IMPORTANT)
 for col in EDITABLE_COLS:
     if col not in df.columns:
         df[col] = ""
@@ -105,6 +121,7 @@ if st.button("💾 Save Changes"):
         updated += 1
 
     st.success(f"✅ {updated} row(s) updated successfully")
+
 
 
 
