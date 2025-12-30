@@ -7,36 +7,38 @@ from datetime import date
 # ================= PAGE CONFIG =================
 st.set_page_config(page_title="Inventory Tracker", layout="wide")
 
-# ================= HEADER (SMALL KONE BLOCKS) =================
-st.markdown("""
+today_str = date.today().strftime("%d %b %Y")
+
+# ================= HEADER =================
+st.markdown(f"""
 <style>
-.kone-header {
+.kone-header {{
     display: flex;
     gap: 6px;
     margin-bottom: 6px;
-}
-.kone-box {
+}}
+.kone-box {{
     background-color: #0071CE;
     color: white;
     font-weight: 700;
     font-size: 26px;
     padding: 6px 14px;
     border-radius: 4px;
-}
-.subtitle {
+}}
+.subtitle {{
     font-size: 14px;
     color: #444;
     margin-bottom: 14px;
-}
+}}
 
-/* FIX DATA VISIBILITY */
-[data-testid="stDataEditor"] {
+/* Ensure table text visible */
+[data-testid="stDataEditor"] {{
     background-color: white !important;
-}
-thead th, tbody td {
+}}
+thead th, tbody td {{
     color: black !important;
     font-size: 14px;
-}
+}}
 </style>
 
 <div class="kone-header">
@@ -46,9 +48,9 @@ thead th, tbody td {
     <div class="kone-box">E</div>
 </div>
 <div class="subtitle">
-Inventory Tracker — {today}
+Inventory Tracker — {today_str}
 </div>
-""".format(today=date.today().strftime("%d %b %Y")), unsafe_allow_html=True)
+""", unsafe_allow_html=True)
 
 # ================= CONFIG =================
 SHEET_ID = "1PY9T5x0sqaDnHTZ5RoDx3LYGBu8bqOT7j4itdlC9yuE"
@@ -83,11 +85,11 @@ for col in EDITABLE_COLS:
     if col not in df.columns:
         df[col] = ""
 
-# Keep Google Sheet row index (hidden)
+# Google Sheet row index (hidden)
 df["_ROW"] = range(2, len(df) + 2)
 
 # ================= SEARCH =================
-search = st.text_input("🔍 Search", placeholder="Search any part, description, box no...")
+search = st.text_input("🔍 Search", placeholder="Search part no, description, box no...")
 
 view = df.copy()
 if search:
