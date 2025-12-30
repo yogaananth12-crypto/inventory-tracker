@@ -6,43 +6,16 @@ from google.oauth2.service_account import Credentials
 # ================= PAGE CONFIG =================
 st.set_page_config(page_title="KONE Inventory", layout="wide")
 
-# ================= KONE HEADER (TEXT LOGO – ALWAYS VISIBLE) =================
-st.markdown("""
-<style>
-.kone-header {
-    display: flex;
-    justify-content: center;
-    gap: 6px;
-    margin: 25px 0 10px 0;
-}
-.kone-box {
-    background-color: #003A8F;
-    color: white;
-    font-size: 36px;
-    font-weight: 800;
-    width: 55px;
-    height: 55px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 6px;
-}
-.subtitle {
-    text-align: center;
-    font-size: 20px;
-    font-weight: 600;
-    margin-bottom: 20px;
-}
-</style>
-
-<div class="kone-header">
-  <div class="kone-box">K</div>
-  <div class="kone-box">O</div>
-  <div class="kone-box">N</div>
-  <div class="kone-box">E</div>
-</div>
-<div class="subtitle">Lift Inventory Tracker</div>
-""", unsafe_allow_html=True)
+# ================= HEADER (BULLETPROOF) =================
+st.markdown(
+    "<h1 style='color:#003A8F; text-align:center; font-weight:900;'>KONE</h1>",
+    unsafe_allow_html=True
+)
+st.markdown(
+    "<h3 style='text-align:center;'>Lift Inventory Tracker</h3>",
+    unsafe_allow_html=True
+)
+st.markdown("---")
 
 # ================= CONFIG =================
 SHEET_ID = "1PY9T5x0sqaDnHTZ5RoDx3LYGBu8bqOT7j4itdlC9yuE"
@@ -72,7 +45,7 @@ if df.empty:
     st.error("Google Sheet is empty")
     st.stop()
 
-# FORCE TEXT TYPE FOR EDITABLE COLUMNS (VERY IMPORTANT)
+# Force editable columns to text
 for col in EDITABLE_COLS:
     if col not in df.columns:
         df[col] = ""
@@ -105,22 +78,12 @@ edited = st.data_editor(
 
 # ================= SAVE =================
 if st.button("💾 Save Changes"):
-    updated = 0
-
     for i, row in edited.iterrows():
         sheet_row = i + 2  # header offset
-
-        values = []
-        for col in df.columns:
-            val = row[col]
-            if pd.isna(val):
-                val = ""
-            values.append(str(val))
-
+        values = [str(row[c]) if not pd.isna(row[c]) else "" for c in df.columns]
         sheet.update(f"A{sheet_row}", [values])
-        updated += 1
 
-    st.success(f"✅ {updated} row(s) updated successfully")
+    st.success("✅ Changes saved to Google Sheet")
 
 
 
