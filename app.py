@@ -3,38 +3,69 @@ import pandas as pd
 import gspread
 from google.oauth2.service_account import Credentials
 
-# ================= PAGE =================
-st.set_page_config(page_title="Inventory Tracker", layout="wide")
+# ================= PAGE CONFIG =================
+st.set_page_config(
+    page_title="KONE Inventory Tracker",
+    layout="wide"
+)
+
+# ================= BRANDING =================
+KONE_BLUE = "#003A8F"
 
 st.markdown(
+    f"""
+    <style>
+        html, body, [class*="css"] {{
+            font-size: 16px;
+        }}
+
+        .kone-header {{
+            text-align: center;
+            padding: 10px 0 20px 0;
+        }}
+
+        .kone-title {{
+            font-size: 40px;
+            font-weight: 800;
+            color: {KONE_BLUE};
+            margin-bottom: 5px;
+        }}
+
+        .kone-subtitle {{
+            font-size: 18px;
+            color: #444;
+        }}
+
+        /* Make data editor text slightly larger */
+        div[data-testid="stDataEditor"] {{
+            font-size: 16px;
+        }}
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+# ================= HEADER =================
+st.markdown(
     """
-    <div style="text-align:center; padding:12px 0;">
-        <h1 style="margin-bottom:5px;">KONE</h1>
-        <h4 style="color:gray; margin-top:0;">
-            Spare Parts Inventory Management System
-        </h4>
-        <hr style="margin-top:15px;">
+    <div class="kone-header">
+        <div class="kone-title">KONE</div>
+        <div class="kone-subtitle">Inventory Management System</div>
     </div>
     """,
     unsafe_allow_html=True
 )
 
+# OPTIONAL LOGO (uncomment if you upload logo.png)
+# st.image("logo.png", width=120)
+
+st.divider()
+
 # ================= CONFIG =================
 SHEET_ID = "1PY9T5x0sqaDnHTZ5RoDx3LYGBu8bqOT7j4itdlC9yuE"
 SHEET_NAME = "Sheet1"
 
-EDITABLE = ["QTY", "LIFT NO", "CALL OUT", "DATE"]
-
-COLUMN_ORDER = [
-    "S.NO",
-    "PART NO",
-    "DESCRIPTION",
-    "BOX NO",
-    "QTY",
-    "LIFT NO",
-    "CALL OUT",
-    "DATE",
-]
+EDITABLE_COLS = ["QTY", "LIFT NO", "CALL OUT", "DATE"]
 
 # ================= AUTH =================
 scopes = [
@@ -58,21 +89,12 @@ if df.empty:
     st.error("Google Sheet is empty")
     st.stop()
 
-# Ensure all columns exist
-for col in COLUMN_ORDER:
+# Ensure editable columns exist
+for col in EDITABLE_COLS:
     if col not in df.columns:
         df[col] = ""
 
-# Reorder
-df = df[COLUMN_ORDER]
-
-# Convert numeric fields
-df["QTY"] = pd.to_numeric(df["QTY"], errors="coerce").fillna(0).astype(int)
-df["LIFT NO"] = df["LIFT NO"].astype(str)
-df["CALL OUT"] = df["CALL OUT"].astype(str)
-df["DATE"] = df["DATE"].astype(str)
-
-# Add row number for saving
+# Stable Google Sheet row number
 df["_ROW"] = range(2, len(df) + 2)
 
 # ================= SEARCH =================
@@ -84,18 +106,18 @@ if search:
         view.apply(lambda r: search.lower() in str(r).lower(), axis=1)
     ]
 
-# ================= EDITOR =================
+# ================= DATA EDITOR =================
 edited = st.data_editor(
     view,
-    hide_index=True,
     use_container_width=True,
-    disabled=[c for c in view.columns if c not in EDITABLE],
-    key="editor",
+    hide_index=True,
+    disabled=[c for c in view.columns if c not in EDITABLE_COLS],
+    key="editor"
 )
 
 # ================= SAVE =================
 if st.button("💾 Save Changes"):
-    updated = 0
+    updates = 0
 
     for _, row in edited.iterrows():
         row_no = int(row["_ROW"])
@@ -104,23 +126,27 @@ if st.button("💾 Save Changes"):
         changed = False
         values = []
 
-        for col in COLUMN_ORDER:
-            new = "" if pd.isna(row[col]) else str(row[col])
-            old = "" if pd.isna(original[col]) else str(original[col])
+        for col in df.columns:
+            if col == "_ROW":
+                continue
 
-            if new != old:
+            new_val = "" if pd.isna(row[col]) else str(row[col])
+            old_val = "" if pd.isna(original[col]) else str(original[col])
+
+            if new_val != old_val:
                 changed = True
 
-            values.append(new)
+            values.append(new_val)
 
         if changed:
             sheet.update(f"A{row_no}", [values])
-            updated += 1
+            updates += 1
 
-    if updated:
-        st.success(f"✅ {updated} row(s) saved to Google Sheet")
+    if updates:
+        st.success(f"✅ {updates} row(s) updated successfully")
     else:
         st.info("No changes detected")
+
 
 
 
