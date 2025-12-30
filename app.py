@@ -114,15 +114,39 @@ edited_df = st.data_editor(
 
 # ================= SAVE =================
 if st.button("💾 Save Changes"):
-    updates = 0
+    updates = []
 
-    for i, row in edited_df.iterrows():
-        row_no = view.loc[i, "_ROW"]
-        values = ["" if pd.isna(v) else str(v) for v in row.tolist()]
-        sheet.update(f"A{row_no}", [values])
-        updates += 1
+    for _, row in edited_df.iterrows():
+        row_no = int(row["_ROW"])
+        original = df[df["_ROW"] == row_no].iloc[0]
 
-    st.success(f"✅ {updates} row(s) saved successfully")
+        changed = False
+        values = []
+
+        for col in df.columns:
+            if col == "_ROW":
+                continue
+
+            new_val = "" if pd.isna(row[col]) else str(row[col])
+            old_val = "" if pd.isna(original[col]) else str(original[col])
+
+            if new_val != old_val:
+                changed = True
+
+            values.append(new_val)
+
+        if changed:
+            updates.append({
+                "range": f"A{row_no}",
+                "values": [values]
+            })
+
+    if updates:
+        sheet.batch_update(updates)
+        st.success(f"✅ {len(updates)} row(s) saved faster")
+    else:
+        st.info("No changes to save")
+
 
 
 
