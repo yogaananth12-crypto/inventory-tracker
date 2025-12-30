@@ -8,43 +8,44 @@ st.set_page_config(page_title="KONE Inventory", layout="wide")
 
 # ================= HEADER (BULLETPROOF) =================
 from datetime import date
+
 today = date.today().strftime("%d %b %Y")
 
-st.markdown(f"""
-<div style="
+st.markdown("""
+<style>
+.kone-box {
+    background:#0047BA;
+    color:white;
+    font-weight:900;
+    font-size:38px;
+    width:64px;
+    height:64px;
     display:flex;
+    align-items:center;
     justify-content:center;
-    gap:8px;
-    margin-top:10px;
-">
-    <div style="background:#0047BA; color:white; font-weight:900; font-size:36px;
-                width:60px; height:60px; display:flex; align-items:center; justify-content:center;">
-        K
-    </div>
-    <div style="background:#0047BA; color:white; font-weight:900; font-size:36px;
-                width:60px; height:60px; display:flex; align-items:center; justify-content:center;">
-        O
-    </div>
-    <div style="background:#0047BA; color:white; font-weight:900; font-size:36px;
-                width:60px; height:60px; display:flex; align-items:center; justify-content:center;">
-        N
-    </div>
-    <div style="background:#0047BA; color:white; font-weight:900; font-size:36px;
-                width:60px; height:60px; display:flex; align-items:center; justify-content:center;">
-        E
-    </div>
+}
+</style>
+""", unsafe_allow_html=True)
+
+st.markdown(f"""
+<div style="display:flex; justify-content:center; gap:8px; margin-top:20px;">
+  <div class="kone-box">K</div>
+  <div class="kone-box">O</div>
+  <div class="kone-box">N</div>
+  <div class="kone-box">E</div>
 </div>
 
 <h3 style="text-align:center; margin-top:12px;">
-    Lift Inventory Tracker
+Lift Inventory Tracker
 </h3>
 
-<p style="text-align:center; color:gray; margin-top:-6px;">
-    {today}
+<p style="text-align:center; color:gray;">
+{today}
 </p>
 
 <hr>
 """, unsafe_allow_html=True)
+
 
 # ================= CONFIG =================
 SHEET_ID = "1PY9T5x0sqaDnHTZ5RoDx3LYGBu8bqOT7j4itdlC9yuE"
