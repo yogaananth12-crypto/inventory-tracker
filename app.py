@@ -1,101 +1,80 @@
 import streamlit as st
 import pandas as pd
-import gspread
-from google.oauth2.service_account import Credentials
 from datetime import date
-# ================= PAGE CONFIG =================
-st.set_page_config(page_title="KONE Inventory", layout="wide")
 
-# ================= HEADER (BULLETPROOF) =================
+# ---------------- PAGE CONFIG ----------------
+st.set_page_config(layout="wide")
+
+# ---------------- HEADER ----------------
+today = date.today().strftime("%d %b %Y")
+
 st.markdown("""
-<div style="text-align:center;margin-bottom:10px">
-  <div style="display:flex;justify-content:center;gap:6px">
-    <div style="width:50px;height:50px;background:#005EB8;color:white;
-                font-size:30px;font-weight:900;display:flex;
-                align-items:center;justify-content:center;border-radius:6px;">K</div>
-    <div style="width:50px;height:50px;background:#005EB8;color:white;
-                font-size:30px;font-weight:900;display:flex;
-                align-items:center;justify-content:center;border-radius:6px;">O</div>
-    <div style="width:50px;height:50px;background:#005EB8;color:white;
-                font-size:30px;font-weight:900;display:flex;
-                align-items:center;justify-content:center;border-radius:6px;">N</div>
-    <div style="width:50px;height:50px;background:#005EB8;color:white;
-                font-size:30px;font-weight:900;display:flex;
-                align-items:center;justify-content:center;border-radius:6px;">E</div>
-  </div>
-  <div style="font-size:18px;font-weight:700;margin-top:4px">
-    Spare Parts Inventory
-  </div>
-</div>
+<style>
+.kone-row {
+    display:flex;
+    justify-content:center;
+    gap:6px;
+    margin-top:20px;
+}
+.kone-box {
+    background:#0047BA;
+    color:white;
+    font-size:34px;
+    font-weight:900;
+    width:58px;
+    height:58px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    border-radius:4px;
+}
+</style>
 """, unsafe_allow_html=True)
 
-# ================= CONFIG =================
-SHEET_ID = "1PY9T5x0sqaDnHTZ5RoDx3LYGBu8bqOT7j4itdlC9yuE"
-SHEET_NAME = "Sheet1"
+st.markdown(f"""
+<div class="kone-row">
+  <div class="kone-box">K</div>
+  <div class="kone-box">O</div>
+  <div class="kone-box">N</div>
+  <div class="kone-box">E</div>
+</div>
 
-EDITABLE_COLS = ["QTY", "LIFT NO", "CALL OUT", "DATE"]
+<h3 style="text-align:center; margin-top:10px;">
+Lift Inventory Tracker
+</h3>
 
-# ================= AUTH =================
-scopes = [
-    "https://www.googleapis.com/auth/spreadsheets",
-    "https://www.googleapis.com/auth/drive",
-]
+<p style="text-align:center; color:gray;">
+{today}
+</p>
 
-creds = Credentials.from_service_account_info(
-    st.secrets["gcp_service_account"],
-    scopes=scopes,
-)
+<hr>
+""", unsafe_allow_html=True)
 
-client = gspread.authorize(creds)
-sheet = client.open_by_key(SHEET_ID).worksheet(SHEET_NAME)
+# ---------------- SAMPLE DATA (REPLACE WITH GOOGLE SHEET LATER) ----------------
+data = {
+    "S.NO": [1, 2],
+    "PART NO": ["P-001", "P-002"],
+    "DESCRIPTION": ["Motor", "Panel"],
+    "BOX NO": ["B1", "B2"],
+    "QTY": [1, 2],
+    "LIFT NO": [1111, 2222],
+    "CALL OUT": [3333, 4444],
+    "DATE": ["2025-12-01", "2025-12-02"]
+}
 
-# ================= LOAD DATA =================
-records = sheet.get_all_records()
-df = pd.DataFrame(records)
+df = pd.DataFrame(data)
 
-if df.empty:
-    st.error("Google Sheet is empty")
-    st.stop()
-
-# Force editable columns to text
-for col in EDITABLE_COLS:
-    if col not in df.columns:
-        df[col] = ""
-    df[col] = df[col].astype(str)
-
-# ================= SEARCH =================
-search = st.text_input("🔍 Search")
-
-view = df.copy()
-if search:
-    view = view[
-        view.apply(lambda r: search.lower() in str(r).lower(), axis=1)
-    ]
-
-# ================= DATA EDITOR =================
-edited = st.data_editor(
-    view,
+# ---------------- DATA EDITOR ----------------
+edited_df = st.data_editor(
+    df,
     use_container_width=True,
-    hide_index=True,
-    height=520,
-    column_config={
-        "QTY": st.column_config.TextColumn(),
-        "LIFT NO": st.column_config.TextColumn(),
-        "CALL OUT": st.column_config.TextColumn(),
-        "DATE": st.column_config.TextColumn(),
-    },
-    disabled=[c for c in df.columns if c not in EDITABLE_COLS],
+    num_rows="dynamic",
     key="editor"
 )
 
-# ================= SAVE =================
-if st.button("💾 Save Changes"):
-    for i, row in edited.iterrows():
-        sheet_row = i + 2  # header offset
-        values = [str(row[c]) if not pd.isna(row[c]) else "" for c in df.columns]
-        sheet.update(f"A{sheet_row}", [values])
+# ---------------- DEBUG CONFIRMATION ----------------
+st.success("✅ If you can edit ALL columns, this version is correct.")
 
-    st.success("✅ Changes saved to Google Sheet")
 
 
 
