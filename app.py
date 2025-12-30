@@ -94,6 +94,7 @@ view = view[COLUMN_ORDER + ["_ROW"]]
 
 # ================= DATA EDITOR =================
 edited = st.data_editor(
+   edited = st.data_editor(
     view,
     use_container_width=True,
     hide_index=True,
@@ -107,6 +108,7 @@ edited = st.data_editor(
         "DATE": st.column_config.TextColumn("DATE", width=130),
     },
     disabled=[c for c in COLUMN_ORDER if c not in EDITABLE],
+    frozen_columns=3,   # 👈 THIS LINE
     key="editor"
 )
 
