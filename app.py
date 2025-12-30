@@ -91,9 +91,6 @@ for col in EDITABLE_COLS:
 # FORCE LIFT NO AS TEXT (DO NOT REMOVE)
 df["LIFT NO"] = df["LIFT NO"].astype(str)
 
-# Add hidden row index
-df["_ROW"] = range(2, len(df) + 2)
-
 # ================= 🔍 SEARCH BAR (ONLY ADDITION) =================
 search = st.text_input("🔍 Search")
 
@@ -116,25 +113,22 @@ edited_df = st.data_editor(
 if st.button("💾 Save Changes"):
     updates = []
 
-    for _, row in edited_df.iterrows():
-        row_no = int(row["_ROW"])
-        original = df[df["_ROW"] == row_no].iloc[0]
+    for idx, row in edited_df.iterrows():
+        # Google Sheet row number ( +2 because header + 0-index )
+        row_no = idx + 2
+
+        original = df.iloc[idx]
 
         row_changed = False
         values = []
 
         for col in df.columns:
-            if col == "_ROW":
-                continue
-
             new_val = row[col]
             old_val = original[col]
 
-            # normalize values
             new_val = "" if pd.isna(new_val) else str(new_val).strip()
             old_val = "" if pd.isna(old_val) else str(old_val).strip()
 
-            # 🔑 compare ONLY editable columns
             if col in EDITABLE_COLS and new_val != old_val:
                 row_changed = True
 
@@ -151,6 +145,7 @@ if st.button("💾 Save Changes"):
         st.success(f"✅ {len(updates)} row(s) saved")
     else:
         st.info("No changes to save")
+
 
 
 
