@@ -5,56 +5,23 @@ from google.oauth2.service_account import Credentials
 from datetime import date
 
 # ================= PAGE CONFIG =================
-st.set_page_config(page_title="Inventory Tracker", layout="wide")
-
-today = date.today().strftime("%d %b %Y")
+st.set_page_config(page_title="KONE Inventory", layout="wide")
 
 # ================= HEADER =================
-st.markdown(f"""
-<style>
-.header-wrapper {{
-    text-align: center;
-    margin-bottom: 14px;
-}}
+today = date.today().strftime("%d %b %Y")
 
-.kone-header {{
-    display: inline-flex;
-    gap: 6px;
-}}
-
-.kone-box {{
-    background-color: #0071CE;
-    color: white;
-    font-weight: 800;
-    font-size: 26px;
-    padding: 6px 14px;
-    border-radius: 4px;
-}}
-
-.subtitle {{
-    font-size: 14px;
-    color: #444;
-    margin-top: 6px;
-}}
-
-thead th, tbody td {{
-    color: black !important;
-    font-size: 14px;
-}}
-</style>
-
-<div class="header-wrapper">
-    <div class="kone-header">
-        <div class="kone-box">K</div>
-        <div class="kone-box">O</div>
-        <div class="kone-box">N</div>
-        <div class="kone-box">E</div>
+st.markdown(
+    f"""
+    <div style="text-align:center; padding:10px 0;">
+        <h1 style="color:#003A8F; margin-bottom:0;">KONE</h1>
+        <p style="margin-top:5px; font-size:16px;">
+            Inventory Tracker • {today}
+        </p>
     </div>
-    <div class="subtitle">
-        Inventory Tracker — {today}
-    </div>
-</div>
-""", unsafe_allow_html=True)
+    <hr>
+    """,
+    unsafe_allow_html=True
+)
 
 # ================= CONFIG =================
 SHEET_ID = "1PY9T5x0sqaDnHTZ5RoDx3LYGBu8bqOT7j4itdlC9yuE"
@@ -84,13 +51,12 @@ if df.empty:
     st.error("Google Sheet is empty")
     st.stop()
 
-# ================= FORCE TEXT FOR EDITABLE COLS (CRITICAL FIX) =================
+# Ensure editable columns exist
 for col in EDITABLE_COLS:
     if col not in df.columns:
         df[col] = ""
-    df[col] = df[col].astype(str)
 
-# Hidden Google Sheet row index
+# Google Sheet row numbers
 df["_ROW"] = range(2, len(df) + 2)
 
 # ================= SEARCH =================
@@ -100,66 +66,71 @@ view = df.copy()
 if search:
     view = view[view.apply(lambda r: search.lower() in str(r).lower(), axis=1)]
 
-# ================= DATA EDITOR =================
-edited = st.data_editor(
-    view.drop(columns=["_ROW"]),
-    hide_index=True,
-    use_container_width=True,
-    disabled=[c for c in view.columns if c not in EDITABLE_COLS],
-    key="editor",
-)
+# ================= DEVICE DETECTION =================
+is_mobile = st.checkbox("📱 Mobile View", value=False)
 
-# ================= SAVE =================
-if st.button("💾 Save Changes"):
-    updated = 0
+# ================= DESKTOP VIEW =================
+if not is_mobile:
+    edited = st.data_editor(
+        view.drop(columns=["_ROW"]),
+        use_container_width=True,
+        hide_index=True,
+        disabled=[c for c in view.columns if c not in EDITABLE_COLS and c != "_ROW"],
+        key="editor"
+    )
 
-    for i, row in edited.iterrows():
-        sheet_row = df.iloc[i]["_ROW"]
-        original = df.iloc[i]
-
-        values = []
-        changed = False
-
-        for col in df.columns:
-            if col == "_ROW":
-                continue
-
-            new = "" if pd.isna(row[col]) else str(row[col])
-            old = "" if pd.isna(original[col]) else str(original[col])
-
-            if new != old:
-                changed = True
-
-            values.append(new)
-
-        if changed:
+    if st.button("💾 Save Changes"):
+        updated = 0
+        for i, row in edited.iterrows():
+            sheet_row = int(view.iloc[i]["_ROW"])
+            values = row.tolist()
             sheet.update(f"A{sheet_row}", [values])
             updated += 1
 
-    if updated:
-        st.success(f"✅ {updated} row(s) updated in Google Sheet")
-    else:
-        st.info("No changes detected")
+        st.success(f"✅ {updated} row(s) saved")
 
+# ================= MOBILE VIEW =================
+else:
+    st.info("📱 Mobile card view enabled")
 
+    for i, row in view.iterrows():
+        with st.container():
+            st.markdown(
+                """
+                <div style="border:1px solid #ddd; padding:12px; border-radius:10px; margin-bottom:12px;">
+                """,
+                unsafe_allow_html=True
+            )
 
+            st.markdown(f"**Part No:** {row.get('PART NO','')}")
+            st.markdown(f"**Description:** {row.get('DESCRIPTION','')}")
+            st.markdown(f"**Box No:** {row.get('BOX NO','')}")
 
+            qty = st.text_input("QTY", row["QTY"], key=f"qty_{i}")
+            lift = st.text_input("LIFT NO", row["LIFT NO"], key=f"lift_{i}")
+            call = st.text_input("CALL OUT", row["CALL OUT"], key=f"call_{i}")
+            dte = st.text_input("DATE", row["DATE"], key=f"date_{i}")
 
+            if st.button("💾 Save", key=f"save_{i}"):
+                values = []
+                for col in df.columns:
+                    if col == "_ROW":
+                        continue
+                    if col == "QTY":
+                        values.append(qty)
+                    elif col == "LIFT NO":
+                        values.append(lift)
+                    elif col == "CALL OUT":
+                        values.append(call)
+                    elif col == "DATE":
+                        values.append(dte)
+                    else:
+                        values.append(row[col])
 
+                sheet.update(f"A{int(row['_ROW'])}", [values])
+                st.success("Saved")
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+            st.markdown("</div>", unsafe_allow_html=True)
 
 
 
