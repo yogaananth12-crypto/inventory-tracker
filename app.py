@@ -12,25 +12,44 @@ today = date.today().strftime("%d %b %Y")
 
 st.markdown(
     f"""
-    <div style="text-align:center; margin-bottom:15px;">
-        <div style="
-            display:inline-block;
-            background:#005EB8;
-            color:white;
-            font-weight:800;
-            font-size:34px;
-            padding:10px 30px;
-            border-radius:6px;
-            letter-spacing:2px;
-        ">
-            KONE
+    <style>
+    .header {{
+        text-align: center;
+        margin-bottom: 20px;
+    }}
+    .kone {{
+        display: inline-flex;
+        gap: 6px;
+    }}
+    .kone span {{
+        width: 50px;
+        height: 50px;
+        background: #005EB8;
+        color: white;
+        font-size: 32px;
+        font-weight: bold;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: Arial, Helvetica, sans-serif;
+    }}
+    .subtitle {{
+        margin-top: 10px;
+        font-size: 20px;
+        font-weight: 600;
+    }}
+    .date {{
+        font-size: 14px;
+        color: #555;
+    }}
+    </style>
+
+    <div class="header">
+        <div class="kone">
+            <span>K</span><span>O</span><span>N</span><span>E</span>
         </div>
-        <div style="font-size:18px; margin-top:6px; font-weight:600;">
-            Lift Inventory Tracker
-        </div>
-        <div style="font-size:14px; color:gray;">
-            {today}
-        </div>
+        <div class="subtitle">Lift Inventory Tracker</div>
+        <div class="date">{today}</div>
     </div>
     """,
     unsafe_allow_html=True
