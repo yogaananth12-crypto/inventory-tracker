@@ -1,84 +1,94 @@
 import streamlit as st
 import pandas as pd
-import gspread
-from google.oauth2.service_account import Credentials
 from datetime import date
 
-# ================= PAGE =================
-st.set_page_config(page_title="KONE Inventory", layout="wide")
+# ---------------- PAGE CONFIG ----------------
+st.set_page_config(
+    page_title="KONE Inventory",
+    layout="wide"
+)
 
-# ================= HEADER =================
+# ---------------- KONE HEADER ----------------
+today = date.today().strftime("%d %b %Y")
+
 st.markdown(
     f"""
-    <div style="display:flex;justify-content:center;margin-bottom:6px;">
-        <div style="display:flex;gap:6px;">
-            <div style="background:#0052CC;color:white;font-weight:700;
-                        padding:10px 14px;border-radius:4px;font-size:20px;">K</div>
-            <div style="background:#0052CC;color:white;font-weight:700;
-                        padding:10px 14px;border-radius:4px;font-size:20px;">O</div>
-            <div style="background:#0052CC;color:white;font-weight:700;
-                        padding:10px 14px;border-radius:4px;font-size:20px;">N</div>
-            <div style="background:#0052CC;color:white;font-weight:700;
-                        padding:10px 14px;border-radius:4px;font-size:20px;">E</div>
+    <style>
+    .kone-header {{
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin-bottom: 25px;
+    }}
+
+    .kone-logo {{
+        display: flex;
+        gap: 6px;
+    }}
+
+    .kone-box {{
+        width: 60px;
+        height: 60px;
+        background-color: #005EB8;
+        color: white;
+        font-size: 36px;
+        font-weight: 800;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: Arial, Helvetica, sans-serif;
+    }}
+
+    .kone-date {{
+        margin-top: 8px;
+        font-size: 14px;
+        color: #555;
+    }}
+    </style>
+
+    <div class="kone-header">
+        <div class="kone-logo">
+            <div class="kone-box">K</div>
+            <div class="kone-box">O</div>
+            <div class="kone-box">N</div>
+            <div class="kone-box">E</div>
         </div>
+        <div class="kone-date">{today}</div>
     </div>
-    <p style="text-align:center;color:#666;font-size:13px;">
-        Inventory Tracker • {date.today().strftime("%d %b %Y")}
-    </p>
     """,
     unsafe_allow_html=True
 )
 
-# ================= GOOGLE SHEET =================
-SHEET_ID = "1PY9T5x0sqaDnHTZ5RoDx3LYGBu8bqOT7j4itdlC9yuE"
-SHEET_NAME = "Sheet1"
+# ---------------- LOAD DATA ----------------
+# Replace this with your Google Sheet loading logic if already present
+data = {
+    "PART NO": ["P-001", "P-002"],
+    "DESCRIPTION": ["Motor", "Panel"],
+    "BOX NO": ["B1", "B2"],
+    "QTY": [1, 2],
+    "LIFT NO": ["1111", "2222"],
+    "CALL OUT": ["3333", "4444"],
+    "DATE": ["2025-12-01", "2025-12-02"]
+}
 
-scopes = [
-    "https://www.googleapis.com/auth/spreadsheets",
-    "https://www.googleapis.com/auth/drive",
-]
-
-creds = Credentials.from_service_account_info(
-    st.secrets["gcp_service_account"],
-    scopes=scopes
-)
-
-client = gspread.authorize(creds)
-sheet = client.open_by_key(SHEET_ID).worksheet(SHEET_NAME)
-
-# ================= LOAD DATA =================
-data = sheet.get_all_records()
 df = pd.DataFrame(data)
 
-if df.empty:
-    st.error("No data found")
-    st.stop()
-
-# 🔥 FORCE STRING FOR PROBLEM COLUMNS
-for col in ["LIFT NO", "CALL OUT", "PART NO", "BOX NO"]:
-    if col in df.columns:
-        df[col] = df[col].astype(str)
-
-# ================= SEARCH =================
-search = st.text_input("🔍 Search")
-
-view = df.copy()
-if search:
-    view = view[view.apply(lambda r: search.lower() in str(r).lower(), axis=1)]
-
-# ================= DATA EDITOR =================
+# ---------------- DATA EDITOR ----------------
 edited = st.data_editor(
-    view,
+    df,
     use_container_width=True,
     hide_index=True,
+    column_config={
+        "LIFT NO": st.column_config.TextColumn(),
+        "CALL OUT": st.column_config.TextColumn(),
+        "DATE": st.column_config.TextColumn(),
+    },
     key="editor"
 )
 
-# ================= SAVE =================
-if st.button("💾 Save Changes"):
-    sheet.clear()
-    sheet.update([edited.columns.tolist()] + edited.values.tolist())
-    st.success("✅ Saved successfully")
+# ---------------- SAVE PREVIEW ----------------
+st.write("### Live Data Preview")
+st.dataframe(edited, use_container_width=True)
 
 
 
