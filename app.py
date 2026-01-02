@@ -6,19 +6,37 @@ from datetime import date
 
 # ================= PAGE =================
 st.set_page_config(page_title="KONE Lift Inventory", layout="wide")
-# ===== BACKGROUND IMAGE (SOFT) =====
+# ===== KONE STYLE ABSTRACT BACKGROUND =====
 st.markdown("""
 <style>
 .stApp {
-    background:
-        linear-gradient(rgba(255,255,255,0.94), rgba(255,255,255,0.94)),
-        url("https://images.unsplash.com/photo-1581090700227-1e37b190418e");
-    background-size: cover;
-    background-position: center;
-    background-attachment: fixed;
+    background: linear-gradient(
+        135deg,
+        #e6f0fa 0%,
+        #ffffff 45%,
+        #f2f7fc 100%
+    );
+}
+
+/* subtle diagonal accent */
+.stApp::before {
+    content: "";
+    position: fixed;
+    top: -20%;
+    right: -20%;
+    width: 70%;
+    height: 70%;
+    background: linear-gradient(
+        135deg,
+        rgba(0,114,206,0.08),
+        rgba(0,114,206,0.02)
+    );
+    transform: rotate(25deg);
+    z-index: -1;
 }
 </style>
 """, unsafe_allow_html=True)
+
 
 # ================= HEADER =================
 today = date.today().strftime("%d %b %Y")
