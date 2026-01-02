@@ -8,32 +8,52 @@ from datetime import date
 st.set_page_config(page_title="KONE Lift Inventory", layout="wide")
 
 # ================= HEADER =================
+today = date.today().strftime("%d %b %Y")
+
 st.markdown(
     f"""
-    <div style="text-align:center; padding:12px 0;">
-        <div style="
-            display:inline-block;
-            background:#0071CE;
-            color:white;
-            font-size:34px;
-            font-weight:700;
-            padding:8px 22px;
-            border-radius:6px;">
-            KONE
+    <style>
+    .header {{
+        text-align: center;
+        margin-bottom: 20px;
+    }}
+    .kone {{
+        display: inline-flex;
+        gap: 6px;
+    }}
+    .kone span {{
+        width: 50px;
+        height: 50px;
+        background: #005EB8;
+        color: white;
+        font-size: 32px;
+        font-weight: bold;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: Arial, Helvetica, sans-serif;
+    }}
+    .subtitle {{
+        margin-top: 10px;
+        font-size: 20px;
+        font-weight: 600;
+    }}
+    .date {{
+        font-size: 14px;
+        color: #555;
+    }}
+    </style>
+
+    <div class="header">
+        <div class="kone">
+            <span>K</span><span>O</span><span>N</span><span>E</span>
         </div>
-        <div style="margin-top:6px; font-size:18px;">
-            Lift Inventory Tracker
-        </div>
-        <div style="font-size:13px; color:#666;">
-            {date.today().strftime("%d %b %Y")}
-        </div>
+        <div class="subtitle">Lift Inventory Tracker</div>
+        <div class="date">{today}</div>
     </div>
     """,
     unsafe_allow_html=True
 )
-
-st.divider()
-
 # ================= CONFIG =================
 SHEET_ID = "1PY9T5x0sqaDnHTZ5RoDx3LYGBu8bqOT7j4itdlC9yuE"
 SHEET_NAME = "Sheet1"
