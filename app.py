@@ -4,32 +4,31 @@ import gspread
 from google.oauth2.service_account import Credentials
 from datetime import date
 
-# ================= PAGE CONFIG =================
+# ================= PAGE =================
 st.set_page_config(page_title="KONE Lift Inventory", layout="wide")
 
 # ================= HEADER =================
 st.markdown(
-    """
-    <div style="text-align:center; padding:10px 0;">
+    f"""
+    <div style="text-align:center; padding:12px 0;">
         <div style="
             display:inline-block;
             background:#0071CE;
             color:white;
-            font-size:36px;
+            font-size:34px;
             font-weight:700;
-            padding:8px 24px;
-            border-radius:6px;
-            letter-spacing:2px;">
+            padding:8px 22px;
+            border-radius:6px;">
             KONE
         </div>
-        <div style="margin-top:8px; font-size:18px; font-weight:500;">
+        <div style="margin-top:6px; font-size:18px;">
             Lift Inventory Tracker
         </div>
-        <div style="font-size:14px; color:#666;">
-            {today}
+        <div style="font-size:13px; color:#666;">
+            {date.today().strftime("%d %b %Y")}
         </div>
     </div>
-    """.format(today=date.today().strftime("%d %b %Y")),
+    """,
     unsafe_allow_html=True
 )
 
@@ -55,20 +54,25 @@ creds = Credentials.from_service_account_info(
 client = gspread.authorize(creds)
 sheet = client.open_by_key(SHEET_ID).worksheet(SHEET_NAME)
 
-# ================= LOAD DATA =================
+# ================= LOAD =================
 records = sheet.get_all_records()
 df = pd.DataFrame(records)
 
 if df.empty:
-    st.error("Google Sheet is empty")
+    st.error("Sheet is empty")
     st.stop()
 
-# Ensure editable columns exist
+# ================= FIX EDITABILITY =================
 for col in EDITABLE_COLS:
     if col not in df.columns:
         df[col] = ""
 
-# Add hidden row pointer for saving
+# FORCE TEXT (THIS FIXES LIFT NO)
+df["LIFT NO"] = df["LIFT NO"].astype(str)
+df["CALL OUT"] = df["CALL OUT"].astype(str)
+df["DATE"] = df["DATE"].astype(str)
+
+# Hidden row pointer
 df["_ROW"] = range(2, len(df) + 2)
 
 # ================= SEARCH =================
@@ -82,7 +86,7 @@ if search:
 
 # ================= DATA EDITOR =================
 edited = st.data_editor(
-    view,
+    view.drop(columns=["_ROW"]),
     use_container_width=True,
     hide_index=True,
     disabled=[c for c in view.columns if c not in EDITABLE_COLS],
@@ -91,14 +95,14 @@ edited = st.data_editor(
 
 # ================= SAVE =================
 if st.button("💾 Save Changes", use_container_width=True):
-    changed_rows = 0
+    updated = 0
 
     with st.spinner("Saving changes..."):
-        for _, row in edited.iterrows():
-            row_no = int(row["_ROW"])
-            original = df[df["_ROW"] == row_no].iloc[0]
+        for i, row in edited.iterrows():
+            sheet_row = int(df.iloc[i]["_ROW"])
+            original = df.iloc[i]
 
-            values = []
+            new_values = []
             changed = False
 
             for col in df.columns:
@@ -111,15 +115,15 @@ if st.button("💾 Save Changes", use_container_width=True):
                 if new_val != old_val:
                     changed = True
 
-                values.append(new_val)
+                new_values.append(new_val)
 
             if changed:
-                sheet.update(f"A{row_no}", [values])
-                changed_rows += 1
+                sheet.update(f"A{sheet_row}", [new_values])
+                updated += 1
 
-    if changed_rows:
-        st.toast("✅ Saved successfully", icon="✅")
-        st.success(f"{changed_rows} row(s) updated")
+    if updated:
+        st.toast("Saved successfully", icon="✅")
+        st.success(f"{updated} row(s) updated")
     else:
         st.info("No changes detected")
 
