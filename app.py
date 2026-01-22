@@ -78,6 +78,7 @@ st.markdown(
 # ================= CONFIG =================
 SHEET_ID = "1PY9T5x0sqaDnHTZ5RoDx3LYGBu8bqOT7j4itdlC9yuE"
 SHEET_NAME = "Sheet1"
+HISTORY_SHEET = "CALL_OUT_HISTORY"
 
 EDITABLE_COLS = ["QTY", "LIFT NO", "CALL OUT", "DATE"]
 
@@ -94,8 +95,9 @@ creds = Credentials.from_service_account_info(
 
 client = gspread.authorize(creds)
 sheet = client.open_by_key(SHEET_ID).worksheet(SHEET_NAME)
+history_sheet = client.open_by_key(SHEET_ID).worksheet(HISTORY_SHEET)
 
-# ================= LOAD =================
+# ================= LOAD MAIN SHEET =================
 records = sheet.get_all_records()
 df = pd.DataFrame(records)
 
@@ -108,15 +110,11 @@ for col in EDITABLE_COLS:
     if col not in df.columns:
         df[col] = ""
 
-# 🔥 FIX: MAKE QTY EDITABLE
 df["QTY"] = df["QTY"].astype(str)
-
-# Existing fixes
 df["LIFT NO"] = df["LIFT NO"].astype(str)
 df["CALL OUT"] = df["CALL OUT"].astype(str)
 df["DATE"] = df["DATE"].astype(str)
 
-# Hidden row pointer
 df["_ROW"] = range(2, len(df) + 2)
 
 # ================= SEARCH =================
@@ -137,7 +135,7 @@ edited = st.data_editor(
     key="editor"
 )
 
-# ================= SAVE =================
+# ================= SAVE (WITH HISTORY LOG) =================
 if st.button("💾 Save Changes", use_container_width=True):
     updated = 0
 
@@ -156,6 +154,16 @@ if st.button("💾 Save Changes", use_container_width=True):
                 new_val = "" if pd.isna(row[col]) else str(row[col])
                 old_val = "" if pd.isna(original[col]) else str(original[col])
 
+                # 🔥 LOG CALL OUT CHANGE
+                if col == "CALL OUT" and new_val != old_val:
+                    history_sheet.append_row([
+                        today,
+                        original.get("PART NO", ""),
+                        old_val,
+                        new_val,
+                        "Streamlit App"
+                    ])
+
                 if new_val != old_val:
                     changed = True
 
@@ -170,6 +178,31 @@ if st.button("💾 Save Changes", use_container_width=True):
         st.success(f"{updated} row(s) updated")
     else:
         st.info("No changes detected")
+
+# ================= CALL OUT HISTORY VIEWER =================
+st.markdown("---")
+st.subheader("📜 CALL OUT History")
+
+history_records = history_sheet.get_all_records()
+history_df = pd.DataFrame(history_records)
+
+if history_df.empty:
+    st.info("No CALL OUT history available yet.")
+else:
+    filter_part = st.text_input("Filter history by PART NO")
+
+    if filter_part:
+        history_df = history_df[
+            history_df["PART NO"]
+            .astype(str)
+            .str.contains(filter_part, case=False, na=False)
+        ]
+
+    st.dataframe(
+        history_df,
+        use_container_width=True,
+        hide_index=True
+    )
 
 
 
