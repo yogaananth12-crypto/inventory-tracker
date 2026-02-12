@@ -19,12 +19,51 @@ st.markdown("""
 # ================= HEADER =================
 today = date.today().strftime("%d %b %Y")
 
-st.markdown(f"""
-<div style="text-align:center;">
-    <h1 style="color:#005EB8;">KONE Lift Inventory Tracker</h1>
-    <p>{today}</p>
-</div>
-""", unsafe_allow_html=True)
+st.markdown(
+    f"""
+    <style>
+    .header {{
+        text-align: center;
+        margin-bottom: 20px;
+    }}
+    .kone {{
+        display: inline-flex;
+        gap: 6px;
+    }}
+    .kone span {{
+        width: 50px;
+        height: 50px;
+        background: #005EB8;
+        color: white;
+        font-size: 32px;
+        font-weight: bold;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: Arial, Helvetica, sans-serif;
+    }}
+    .subtitle {{
+        margin-top: 10px;
+        font-size: 20px;
+        font-weight: 600;
+    }}
+    .date {{
+        font-size: 14px;
+        color: #555;
+    }}
+    </style>
+
+    <div class="header">
+        <div class="kone">
+            <span>K</span><span>O</span><span>N</span><span>E</span>
+        </div>
+        <div class="subtitle">Lift Inventory Tracker</div>
+        <div class="date">{today}</div>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+
 
 # ================= CONFIG =================
 SHEET_ID = "1PY9T5x0sqaDnHTZ5RoDx3LYGBu8bqOT7j4itdlC9yuE"
