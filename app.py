@@ -13,74 +13,26 @@ st.markdown("""
 .stApp {
     background: linear-gradient(135deg,#e6f0fa 0%,#ffffff 45%,#f2f7fc 100%);
 }
-.stApp::before {
-    content: "";
-    position: fixed;
-    top: -20%;
-    right: -20%;
-    width: 70%;
-    height: 70%;
-    background: linear-gradient(135deg,rgba(0,114,206,0.08),rgba(0,114,206,0.02));
-    transform: rotate(25deg);
-    z-index: -1;
-}
 </style>
 """, unsafe_allow_html=True)
 
 # ================= HEADER =================
 today = date.today().strftime("%d %b %Y")
 
-st.markdown(
-    f"""
-    <style>
-    .header {{
-        text-align: center;
-        margin-bottom: 20px;
-    }}
-    .kone {{
-        display: inline-flex;
-        gap: 6px;
-    }}
-    .kone span {{
-        width: 50px;
-        height: 50px;
-        background: #005EB8;
-        color: white;
-        font-size: 32px;
-        font-weight: bold;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-family: Arial, Helvetica, sans-serif;
-    }}
-    .subtitle {{
-        margin-top: 10px;
-        font-size: 20px;
-        font-weight: 600;
-    }}
-    .date {{
-        font-size: 14px;
-        color: #555;
-    }}
-    </style>
-
-    <div class="header">
-        <div class="kone">
-            <span>K</span><span>O</span><span>N</span><span>E</span>
-        </div>
-        <div class="subtitle">Lift Inventory Tracker</div>
-        <div class="date">{today}</div>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
+st.markdown(f"""
+<div style="text-align:center;">
+    <h1 style="color:#005EB8;">KONE Lift Inventory Tracker</h1>
+    <p>{today}</p>
+</div>
+""", unsafe_allow_html=True)
 
 # ================= CONFIG =================
 SHEET_ID = "1PY9T5x0sqaDnHTZ5RoDx3LYGBu8bqOT7j4itdlC9yuE"
-SHEET_NAME = "Sheet1"
-HISTORY_SHEET = "CALL_OUT_HISTORY"
+MAIN_SHEET = "Sheet1"
+HISTORY_SHEET = "EDIT_HISTORY"
 
 EDITABLE_COLS = ["QTY", "LIFT NO", "CALL OUT", "DATE"]
+TRACKED_COLS = ["QTY", "LIFT NO", "CALL OUT"]
 
 # ================= AUTH =================
 scopes = [
@@ -94,27 +46,22 @@ creds = Credentials.from_service_account_info(
 )
 
 client = gspread.authorize(creds)
-sheet = client.open_by_key(SHEET_ID).worksheet(SHEET_NAME)
+sheet = client.open_by_key(SHEET_ID).worksheet(MAIN_SHEET)
 history_sheet = client.open_by_key(SHEET_ID).worksheet(HISTORY_SHEET)
 
-# ================= LOAD MAIN SHEET =================
-records = sheet.get_all_records()
-df = pd.DataFrame(records)
+# ================= LOAD DATA =================
+df = pd.DataFrame(sheet.get_all_records())
 
 if df.empty:
     st.error("Sheet is empty")
     st.stop()
 
-# ================= FIX EDITABILITY =================
+# ================= FIX TYPES =================
 for col in EDITABLE_COLS:
     if col not in df.columns:
         df[col] = ""
 
-df["QTY"] = df["QTY"].astype(str)
-df["LIFT NO"] = df["LIFT NO"].astype(str)
-df["CALL OUT"] = df["CALL OUT"].astype(str)
-df["DATE"] = df["DATE"].astype(str)
-
+df = df.astype(str)
 df["_ROW"] = range(2, len(df) + 2)
 
 # ================= SEARCH =================
@@ -122,9 +69,7 @@ search = st.text_input("🔍 Search")
 
 view = df.copy()
 if search:
-    view = view[
-        view.apply(lambda r: search.lower() in str(r).lower(), axis=1)
-    ]
+    view = view[view.apply(lambda r: search.lower() in str(r).lower(), axis=1)]
 
 # ================= DATA EDITOR =================
 edited = st.data_editor(
@@ -135,36 +80,35 @@ edited = st.data_editor(
     key="editor"
 )
 
-# ================= SAVE (WITH HISTORY LOG) =================
+# ================= SAVE + HISTORY =================
 if st.button("💾 Save Changes", use_container_width=True):
     updated = 0
 
     with st.spinner("Saving changes..."):
         for i, row in edited.iterrows():
-            sheet_row = int(df.iloc[i]["_ROW"])
             original = df.iloc[i]
+            sheet_row = int(original["_ROW"])
 
-            new_values = []
             changed = False
+            new_values = []
 
             for col in df.columns:
                 if col == "_ROW":
                     continue
 
-                new_val = "" if pd.isna(row[col]) else str(row[col])
-                old_val = "" if pd.isna(original[col]) else str(original[col])
+                new_val = row[col]
+                old_val = original[col]
 
-                # 🔥 LOG CALL OUT CHANGE
-                if col == "CALL OUT" and new_val != old_val:
+                # 🔥 TRACK HISTORY
+                if col in TRACKED_COLS and new_val != old_val:
                     history_sheet.append_row([
                         today,
                         original.get("PART NO", ""),
+                        col,
                         old_val,
                         new_val,
                         "Streamlit App"
                     ])
-
-                if new_val != old_val:
                     changed = True
 
                 new_values.append(new_val)
@@ -174,20 +118,18 @@ if st.button("💾 Save Changes", use_container_width=True):
                 updated += 1
 
     if updated:
-        st.toast("Saved successfully", icon="✅")
-        st.success(f"{updated} row(s) updated")
+        st.success(f"{updated} row(s) updated successfully")
     else:
         st.info("No changes detected")
 
-# ================= CALL OUT HISTORY VIEWER =================
+# ================= HISTORY VIEW =================
 st.markdown("---")
-st.subheader("📜 CALL OUT History")
+st.subheader("📜 Edit History (QTY / LIFT NO / CALL OUT)")
 
-history_records = history_sheet.get_all_records()
-history_df = pd.DataFrame(history_records)
+history_df = pd.DataFrame(history_sheet.get_all_records())
 
 if history_df.empty:
-    st.info("No CALL OUT history available yet.")
+    st.info("No history recorded yet.")
 else:
     filter_part = st.text_input("Filter history by PART NO")
 
@@ -198,11 +140,8 @@ else:
             .str.contains(filter_part, case=False, na=False)
         ]
 
-    st.dataframe(
-        history_df,
-        use_container_width=True,
-        hide_index=True
-    )
+    st.dataframe(history_df, use_container_width=True, hide_index=True)
+
 
 
 
