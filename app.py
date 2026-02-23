@@ -8,8 +8,7 @@ from datetime import datetime
 st.set_page_config(page_title="KONE Lift Inventory", layout="wide")
 
 # ================= HEADER =================
-today = datetime.today()
-today_str = today.strftime("%d %b %Y")
+today_str = datetime.today().strftime("%d %b %Y")
 
 st.markdown(f"""
 <style>
@@ -60,7 +59,8 @@ SHEET_ID = "1PY9T5x0sqaDnHTZ5RoDx3LYGBu8bqOT7j4itdlC9yuE"
 MAIN_SHEET = "Sheet1"
 HISTORY_SHEET = "EDIT_HISTORY"
 
-EDITABLE_COLS = ["QTY", "LIFT NO", "CALL OUT", "DATE"]
+# 🔥 DATE removed from editable
+EDITABLE_COLS = ["QTY", "LIFT NO", "CALL OUT"]
 TRACKED_COLS = ["QTY", "LIFT NO", "CALL OUT"]
 
 # ================= AUTH =================
@@ -80,7 +80,7 @@ try:
     sheet = client.open_by_key(SHEET_ID).worksheet(MAIN_SHEET)
     history_sheet = client.open_by_key(SHEET_ID).worksheet(HISTORY_SHEET)
 except Exception:
-    st.error("Google Sheet not accessible. Check Sheet ID / Storage / Permissions.")
+    st.error("Google Sheet not accessible. Check Sheet ID / Permissions.")
     st.stop()
 
 # ================= LOAD MAIN DATA =================
@@ -94,7 +94,7 @@ if df.empty:
     st.warning("Sheet is empty.")
     st.stop()
 
-# Ensure required columns exist
+# Ensure editable columns exist
 for col in EDITABLE_COLS:
     if col not in df.columns:
         df[col] = ""
@@ -137,14 +137,17 @@ if st.button("💾 Save Changes", use_container_width=True):
                 new_val = str(row[col])
                 old_val = str(original[col])
 
+                # 🔥 Track history safely
                 if col in TRACKED_COLS and new_val != old_val:
 
+                    current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
                     history_sheet.append_row([
-                        today.strftime("%Y-%m-%d"),
+                        current_time,
                         original.get("PART NO", ""),
                         col,
-                        old_val,
                         new_val,
+                        old_val,
                         "Streamlit App"
                     ])
 
@@ -168,16 +171,23 @@ st.subheader("📜 Edit History")
 try:
     history_df = pd.DataFrame(history_sheet.get_all_records())
 except:
-    st.warning("History sheet empty or not accessible.")
+    st.warning("History sheet not accessible.")
     st.stop()
 
 if history_df.empty:
     st.info("No history recorded yet.")
 else:
 
-    # ---- Monthly Filter ----
+    # Ensure DATE column exists
+    if "DATE" not in history_df.columns:
+        st.warning("DATE column missing in history sheet.")
+        st.dataframe(history_df)
+        st.stop()
+
+    # Convert DATE safely
     history_df["DATE"] = pd.to_datetime(history_df["DATE"], errors="coerce")
 
+    # ---- Monthly Filter ----
     months = {
         "All": None,
         "Jan": 1, "Feb": 2, "Mar": 3, "Apr": 4,
@@ -202,9 +212,11 @@ else:
             .str.contains(filter_part, case=False, na=False)
         ]
 
-    st.dataframe(history_df.sort_values("DATE", ascending=False),
-                 use_container_width=True,
-                 hide_index=True)
+    st.dataframe(
+        history_df.sort_values("DATE", ascending=False),
+        use_container_width=True,
+        hide_index=True
+    )
 
 
 
