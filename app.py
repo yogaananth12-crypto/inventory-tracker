@@ -2,14 +2,13 @@ import streamlit as st
 import pandas as pd
 import gspread
 from google.oauth2.service_account import Credentials
-from datetime import date
+from datetime import datetime
 import matplotlib.pyplot as plt
 
 # ================= PAGE =================
 st.set_page_config(page_title="KONE Lift Inventory", layout="wide")
 
-# ================= HEADER =================
-today = date.today().strftime("%d %b %Y")
+today = datetime.today().strftime("%d-%b-%Y")
 
 st.markdown(f"""
 <div style="text-align:center;">
@@ -38,15 +37,26 @@ creds = Credentials.from_service_account_info(
 )
 
 client = gspread.authorize(creds)
-sheet = client.open_by_key(SHEET_ID).worksheet(MAIN_SHEET)
-history_sheet = client.open_by_key(SHEET_ID).worksheet(HISTORY_SHEET)
+spreadsheet = client.open_by_key(SHEET_ID)
+
+# ================= SAFE SHEET ACCESS =================
+sheet = spreadsheet.worksheet(MAIN_SHEET)
+
+try:
+    history_sheet = spreadsheet.worksheet(HISTORY_SHEET)
+except:
+    history_sheet = spreadsheet.add_worksheet(title=HISTORY_SHEET, rows=1000, cols=10)
+    history_sheet.append_row(["DATE", "PART NO", "FIELD", "OLD VALUE", "NEW VALUE", "UPDATED VIA"])
 
 # ================= LOAD DATA =================
 df = pd.DataFrame(sheet.get_all_records())
 
 if df.empty:
-    st.error("Sheet is empty")
+    st.error("Main sheet is empty")
     st.stop()
+
+# Clean headers
+df.columns = df.columns.str.strip().str.upper()
 
 for col in EDITABLE_COLS:
     if col not in df.columns:
@@ -68,15 +78,16 @@ edited = st.data_editor(
     use_container_width=True,
     hide_index=True,
     disabled=[c for c in view.columns if c not in EDITABLE_COLS],
-    key="editor"
 )
 
 # ================= SAVE + HISTORY =================
 if st.button("💾 Save Changes", use_container_width=True):
+
     updated = 0
 
     with st.spinner("Saving changes..."):
         for i, row in edited.iterrows():
+
             original = df.iloc[i]
             sheet_row = int(original["_ROW"])
 
@@ -87,8 +98,8 @@ if st.button("💾 Save Changes", use_container_width=True):
                 if col == "_ROW":
                     continue
 
-                new_val = str(row[col])
-                old_val = str(original[col])
+                new_val = str(row.get(col, ""))
+                old_val = str(original.get(col, ""))
 
                 if col in TRACKED_COLS and new_val != old_val:
                     history_sheet.append_row([
@@ -112,20 +123,28 @@ if st.button("💾 Save Changes", use_container_width=True):
     else:
         st.info("No changes detected")
 
-# ================= HISTORY =================
-st.markdown("---")
-st.subheader("📜 Edit History")
-
+# ================= LOAD HISTORY =================
 history_df = pd.DataFrame(history_sheet.get_all_records())
 
 if not history_df.empty:
 
+    history_df.columns = history_df.columns.str.strip().str.upper()
+
+    # Safe column check
+    required_cols = ["DATE", "FIELD"]
+
+    for col in required_cols:
+        if col not in history_df.columns:
+            st.warning("History sheet structure incorrect.")
+            st.stop()
+
     history_df["DATE"] = pd.to_datetime(history_df["DATE"], errors="coerce")
 
     # ================= MONTH BUTTON FILTER =================
-    st.subheader("📅 Monthly View")
+    st.markdown("---")
+    st.subheader("📅 Monthly Filter")
 
-    history_df["MonthNum"] = history_df["DATE"].dt.month
+    history_df["MONTH"] = history_df["DATE"].dt.month
 
     month_map = {
         1: "JAN", 2: "FEB", 3: "MAR", 4: "APR",
@@ -147,13 +166,13 @@ if not history_df.empty:
     st.session_state["selected_month"] = selected_month
 
     if selected_month != "ALL":
-        history_df = history_df[history_df["MonthNum"] == selected_month]
+        history_df = history_df[history_df["MONTH"] == selected_month]
 
-    st.dataframe(history_df, use_container_width=True, hide_index=True)
+    st.dataframe(history_df, use_container_width=True)
 
     # ================= DASHBOARD =================
     st.markdown("---")
-    st.header("📊 Inventory Dashboard")
+    st.header("📊 Dashboard")
 
     col1, col2, col3 = st.columns(3)
 
@@ -168,49 +187,31 @@ if not history_df.empty:
         st.metric("Total Edits", len(history_df))
 
     # ---------------- QTY TREND ----------------
-    st.subheader("QTY Changes Over Time")
+    st.subheader("QTY Changes")
 
-    qty_history = history_df[history_df["FIELD"] == "QTY"]
+    if "FIELD" in history_df.columns:
+        qty_history = history_df[history_df["FIELD"] == "QTY"]
 
-    if not qty_history.empty:
-        trend = qty_history.groupby("DATE").size()
+        if not qty_history.empty:
+            trend = qty_history.groupby("DATE").size()
 
-        fig = plt.figure()
-        trend.plot()
-        plt.title("QTY Changes")
-        plt.xlabel("Date")
-        plt.ylabel("Number of Changes")
-        st.pyplot(fig)
-    else:
-        st.info("No QTY changes recorded.")
+            fig = plt.figure()
+            trend.plot()
+            plt.xlabel("Date")
+            plt.ylabel("Changes")
+            st.pyplot(fig)
+        else:
+            st.info("No QTY changes recorded.")
 
-    # ---------------- DAILY ACTIVITY ----------------
-    st.subheader("All Edits Per Day")
-
-    daily = history_df.groupby("DATE").size()
-
-    fig2 = plt.figure()
-    daily.plot()
-    plt.title("Daily Edit Activity")
-    plt.xlabel("Date")
-    plt.ylabel("Number of Edits")
-    st.pyplot(fig2)
-
-    # ---------------- LOW STOCK ALERT ----------------
+    # ---------------- LOW STOCK ----------------
     st.subheader("⚠ Low Stock Alert")
 
     df["QTY_NUM"] = pd.to_numeric(df["QTY"], errors="coerce").fillna(0)
-    LOW_STOCK_LIMIT = 5
-
-    low_stock = df[df["QTY_NUM"] <= LOW_STOCK_LIMIT]
+    low_stock = df[df["QTY_NUM"] <= 5]
 
     if not low_stock.empty:
-        st.warning(f"{len(low_stock)} item(s) low in stock (≤ {LOW_STOCK_LIMIT})")
-        st.dataframe(
-            low_stock[["PART NO", "QTY"]],
-            use_container_width=True,
-            hide_index=True
-        )
+        st.warning(f"{len(low_stock)} item(s) low in stock")
+        st.dataframe(low_stock[["PART NO", "QTY"]])
     else:
         st.success("No low stock items 🎉")
 
