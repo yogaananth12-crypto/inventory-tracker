@@ -118,40 +118,45 @@ edited = st.data_editor(
 )
 
 # ================= SAVE + HISTORY =================
-if col in TRACKED_COLS and new_val != old_val:
+if st.button("💾 Save Changes", use_container_width=True):
 
-    current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    updated = 0
 
-    history_data = {
-        "DATE": current_time,
-        "PART NO": original.get("PART NO", ""),
-        "FIELD": col,
-        "NEW VALUE": new_val,
-        "OLD VALUE": old_val,
-        "UPDATED VIA": "Streamlit App"
-    }
+    with st.spinner("Saving changes..."):
+        for i, row in edited.iterrows():
 
-    history_sheet.append_row(list(history_data.values()))
+            original = df.iloc[i]
+            sheet_row = int(original["_ROW"])
+            changed = False
+            new_values = []
 
-                # 🔥 Track history safely
+            for col in df.columns:
+
+                if col == "_ROW":
+                    continue
+
+                new_val = str(row[col])
+                old_val = str(original[col])
+
+                # ---- TRACK CHANGES ----
                 if col in TRACKED_COLS and new_val != old_val:
 
-                    # ALWAYS generate fresh timestamp here
                     current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
                     history_sheet.append_row([
-                        current_time,                     # DATE (from system time)
-                        original.get("PART NO", ""),      # PART NO
-                        col,                              # FIELD changed
-                        new_val,                          # NEW VALUE
-                        old_val,                          # OLD VALUE
-                        "Streamlit App"                   # UPDATED VIA
+                        current_time,
+                        original.get("PART NO", ""),
+                        col,
+                        new_val,
+                        old_val,
+                        "Streamlit App"
                     ])
 
                     changed = True
 
                 new_values.append(new_val)
 
+            # ---- UPDATE MAIN SHEET ----
             if changed:
                 sheet.update(f"A{sheet_row}", [new_values])
                 updated += 1
