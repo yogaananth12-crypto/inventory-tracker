@@ -145,7 +145,6 @@ if st.button("💾 Save Changes", use_container_width=True):
                         col,
                         old_val,
                         new_val,
-                        original.get("LIFT NO", ""),
                         "Streamlit App"
                     ])
 
