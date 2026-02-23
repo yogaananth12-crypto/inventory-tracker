@@ -118,24 +118,20 @@ edited = st.data_editor(
 )
 
 # ================= SAVE + HISTORY =================
-if st.button("💾 Save Changes", use_container_width=True):
+if col in TRACKED_COLS and new_val != old_val:
 
-    updated = 0
+    current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    with st.spinner("Saving changes..."):
-        for i, row in edited.iterrows():
+    history_data = {
+        "DATE": current_time,
+        "PART NO": original.get("PART NO", ""),
+        "FIELD": col,
+        "NEW VALUE": new_val,
+        "OLD VALUE": old_val,
+        "UPDATED VIA": "Streamlit App"
+    }
 
-            original = df.iloc[i]
-            sheet_row = int(original["_ROW"])
-            changed = False
-            new_values = []
-
-            for col in df.columns:
-                if col == "_ROW":
-                    continue
-
-                new_val = str(row[col])
-                old_val = str(original[col])
+    history_sheet.append_row(list(history_data.values()))
 
                 # 🔥 Track history safely
                 if col in TRACKED_COLS and new_val != old_val:
