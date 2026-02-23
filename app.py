@@ -140,15 +140,16 @@ if st.button("💾 Save Changes", use_container_width=True):
                 # 🔥 Track history safely
                 if col in TRACKED_COLS and new_val != old_val:
 
+                    # ALWAYS generate fresh timestamp here
                     current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
                     history_sheet.append_row([
-                        current_time,
-                        original.get("PART NO", ""),
-                        col,
-                        new_val,
-                        old_val,
-                        "Streamlit App"
+                        current_time,                     # DATE (from system time)
+                        original.get("PART NO", ""),      # PART NO
+                        col,                              # FIELD changed
+                        new_val,                          # NEW VALUE
+                        old_val,                          # OLD VALUE
+                        "Streamlit App"                   # UPDATED VIA
                     ])
 
                     changed = True
