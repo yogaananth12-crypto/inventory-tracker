@@ -44,9 +44,46 @@ st.markdown("""
 
 # ================= HEADER =================
 st.markdown(f"""
-<div style="text-align:center;">
-    <h1 style="color:#005EB8;">KONE Lift Inventory Tracker</h1>
-    <div style="color:gray;">{today_str} | Singapore Time</div>
+<style>
+.stApp {{
+    background: linear-gradient(135deg,#e6f0fa 0%,#ffffff 45%,#f2f7fc 100%);
+}}
+.header {{
+    text-align: center;
+    margin-bottom: 20px;
+}}
+.kone {{
+    display: inline-flex;
+    gap: 6px;
+}}
+.kone span {{
+    width: 50px;
+    height: 50px;
+    background: #005EB8;
+    color: white;
+    font-size: 32px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}}
+.subtitle {{
+    margin-top: 10px;
+    font-size: 20px;
+    font-weight: 600;
+}}
+.date {{
+    font-size: 14px;
+    color: #555;
+}}
+</style>
+
+<div class="header">
+    <div class="kone">
+        <span>K</span><span>O</span><span>N</span><span>E</span>
+    </div>
+    <div class="subtitle">Lift Inventory Tracker</div>
+    <div class="date">{today_str}</div>
 </div>
 """, unsafe_allow_html=True)
 
