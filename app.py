@@ -61,7 +61,7 @@ st.markdown(f"""
 }}
 .kone span {{
     width: 50px;
-    height: 50px;
+    height: 70px;
     background: #005EB8;
     color: white;
     font-size: 32px;
@@ -129,6 +129,14 @@ df = df.astype(str)
 df["_ROW"] = range(2, len(df) + 2)
 
 df["QTY_NUM"] = pd.to_numeric(df["QTY"], errors="coerce").fillna(0)
+
+# ================= LOW STOCK ALERT =================
+df["QTY_NUM"] = pd.to_numeric(df["QTY"], errors="coerce").fillna(0)
+
+low_stock = df[df["QTY_NUM"] <= 2]
+
+if not low_stock.empty:
+    st.error(f"⚠ {len(low_stock)} Item(s) Low Stock (≤ 2 Qty)")
 
 # ================= KPI SECTION =================
 total_parts = len(df)
