@@ -61,10 +61,10 @@ st.markdown(f"""
 }}
 .kone span {{
     width: 50px;
-    height: 70px;
+    height: 80px;
     background: #005EB8;
     color: white;
-    font-size: 36px;
+    font-size: 40px;
     font-weight: bold;
     display: flex;
     align-items: center;
