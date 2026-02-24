@@ -237,17 +237,41 @@ if st.button("Save Changes", use_container_width=True):
         st.info("No changes detected.")
 
 # ================= HISTORY =================
-st.markdown('<div class="section-title">Edit History</div>', unsafe_allow_html=True)
+st.markdown("---")
+st.subheader("📜 Edit History")
 
-try:
-    history_df = pd.DataFrame(history_sheet.get_all_records())
-except:
-    st.warning("History sheet empty.")
-    st.stop()
+history_df = pd.DataFrame(history_sheet.get_all_records())
 
 if history_df.empty:
     st.info("No history recorded yet.")
 else:
+
+    if "DATE" in history_df.columns:
+        history_df["DATE"] = pd.to_datetime(history_df["DATE"], errors="coerce")
+
+        months = {
+            "All": None,
+            "Jan": 1, "Feb": 2, "Mar": 3, "Apr": 4,
+            "May": 5, "Jun": 6, "Jul": 7, "Aug": 8,
+            "Sep": 9, "Oct": 10, "Nov": 11, "Dec": 12
+        }
+
+        selected_month = st.selectbox("📅 Filter by Month", list(months.keys()))
+
+        if months[selected_month]:
+            history_df = history_df[
+                history_df["DATE"].dt.month == months[selected_month]
+            ]
+
+    filter_part = st.text_input("Filter by PART NO")
+
+    if filter_part and "PART NO" in history_df.columns:
+        history_df = history_df[
+            history_df["PART NO"]
+            .astype(str)
+            .str.contains(filter_part, case=False, na=False)
+        ]
+
     st.dataframe(
         history_df.sort_values("DATE", ascending=False),
         use_container_width=True,
