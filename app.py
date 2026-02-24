@@ -53,7 +53,7 @@ st.markdown(f"""
 }}
 .header {{
     text-align: center;
-    margin-bottom: 40px;
+    margin-bottom: 60px;
 }}
 .kone {{
     display: inline-flex;
