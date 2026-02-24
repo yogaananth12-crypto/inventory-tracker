@@ -118,6 +118,8 @@ edited = st.data_editor(
 )
 
 # ================= SAVE + HISTORY =================
+from zoneinfo import ZoneInfo
+
 if st.button("💾 Save Changes", use_container_width=True):
 
     updated = 0
@@ -138,29 +140,26 @@ if st.button("💾 Save Changes", use_container_width=True):
                 new_val = str(row[col])
                 old_val = str(original[col])
 
-                # ---- TRACK CHANGES ----
-                from zoneinfo import ZoneInfo
+                # Track changes
+                if col in TRACKED_COLS and new_val != old_val:
 
-if col in TRACKED_COLS and new_val != old_val:
+                    current_time = datetime.now(
+                        ZoneInfo("Asia/Singapore")
+                    ).strftime("%Y-%m-%d %H:%M:%S")
 
-    current_time = datetime.now(
-        ZoneInfo("Asia/Singapore")
-    ).strftime("%Y-%m-%d %H:%M:%S")
+                    history_sheet.append_row([
+                        current_time,
+                        original.get("PART NO", ""),
+                        col,
+                        new_val,
+                        old_val,
+                        "Streamlit App"
+                    ])
 
-    history_sheet.append_row([
-        current_time,
-        original.get("PART NO", ""),
-        col,
-        new_val,
-        old_val,
-        "Streamlit App"
-    ])
-
-    changed = True
+                    changed = True
 
                 new_values.append(new_val)
 
-            # ---- UPDATE MAIN SHEET ----
             if changed:
                 sheet.update(f"A{sheet_row}", [new_values])
                 updated += 1
