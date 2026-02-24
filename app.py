@@ -43,52 +43,31 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ================= HEADER =================
-today = datetime.today()
-today_str = today.strftime("%d %b %Y")
+from datetime import datetime
+import pytz
 
-st.markdown(f"""
-<style>
-.stApp {{
-    background: linear-gradient(135deg,#e6f0fa 0%,#ffffff 45%,#f2f7fc 100%);
-}}
-.header {{
-    text-align: center;
-    margin-bottom: 20px;
-}}
-.kone {{
-    display: inline-flex;
-    gap: 6px;
-}}
-.kone span {{
-    width: 50px;
-    height: 50px;
-    background: #005EB8;
-    color: white;
-    font-size: 32px;
-    font-weight: bold;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}}
-.subtitle {{
-    margin-top: 10px;
-    font-size: 20px;
-    font-weight: 600;
-}}
-.date {{
-    font-size: 14px;
-    color: #555;
-}}
-</style>
+# Singapore Time
+sg_tz = pytz.timezone("Asia/Singapore")
+now = datetime.now(sg_tz)
+datetime_str = now.strftime("%d %b %Y | %I:%M:%S %p")
 
-<div class="header">
-    <div class="kone">
-        <span>K</span><span>O</span><span>N</span><span>E</span>
+col_logo, col_title = st.columns([1, 4])
+
+with col_logo:
+    st.image(
+        "https://upload.wikimedia.org/wikipedia/commons/5/5c/KONE_Logo.svg",
+        width=180
+    )
+
+with col_title:
+    st.markdown(f"""
+    <h1 style="color:#005EB8; margin-bottom:5px;">
+        Lift Inventory Tracker
+    </h1>
+    <div style="color:gray; font-size:16px;">
+        Singapore Time: {datetime_str}
     </div>
-    <div class="subtitle">Lift Inventory Tracker</div>
-    <div class="date">{today_str}</div>
-</div>
-""", unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
 
 # ================= CONFIG =================
 SHEET_ID = "1PY9T5x0sqaDnHTZ5RoDx3LYGBu8bqOT7j4itdlC9yuE"
