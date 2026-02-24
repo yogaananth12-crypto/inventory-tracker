@@ -53,15 +53,15 @@ st.markdown(f"""
 }}
 .header {{
     text-align: center;
-    margin-bottom: 60px;
+    margin-bottom: 80px;
 }}
 .kone {{
     display: inline-flex;
     gap: 6px;
 }}
 .kone span {{
-    width: 50px;
-    height: 80px;
+    width: 60px;
+    height: 90px;
     background: #005EB8;
     color: white;
     font-size: 40px;
