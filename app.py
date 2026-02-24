@@ -36,7 +36,7 @@ st.markdown("""
 .section-title {
     font-size: 20px;
     font-weight: 600;
-    margin-top: 40px;
+    margin-top: 60px;
     margin-bottom: 10px;
 }
 </style>
