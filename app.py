@@ -168,7 +168,39 @@ if st.button("💾 Save Changes", use_container_width=True):
         st.success(f"{updated} row(s) updated successfully")
     else:
         st.info("No changes detected.")
+# ================= DASHBOARD =================
+st.markdown("---")
+st.subheader("📊 Inventory Overview")
 
+# Convert QTY to numeric safely
+df["QTY_NUM"] = pd.to_numeric(df["QTY"], errors="coerce").fillna(0)
+
+# Stock categories
+low_stock = df[df["QTY_NUM"] <= 2]
+medium_stock = df[(df["QTY_NUM"] > 2) & (df["QTY_NUM"] <= 4)]
+high_stock = df[df["QTY_NUM"] > 4]
+
+col1, col2, col3 = st.columns(3)
+
+col1.metric("🔴 Low Stock (≤2)", len(low_stock))
+col2.metric("🟡 Medium Stock (3-4)", len(medium_stock))
+col3.metric("🟢 In Stock (5+)", len(high_stock))
+
+# Pie Chart
+fig, ax = plt.subplots()
+
+sizes = [
+    len(low_stock),
+    len(medium_stock),
+    len(high_stock)
+]
+
+labels = ["Low (≤2)", "Medium (3-4)", "In Stock (5+)"]
+
+ax.pie(sizes, labels=labels, autopct="%1.1f%%")
+ax.set_title("Stock Distribution")
+
+st.pyplot(fig)
 # ================= HISTORY SECTION =================
 st.markdown("---")
 st.subheader("📜 Edit History")
