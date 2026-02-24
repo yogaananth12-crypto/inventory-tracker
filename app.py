@@ -139,20 +139,24 @@ if st.button("💾 Save Changes", use_container_width=True):
                 old_val = str(original[col])
 
                 # ---- TRACK CHANGES ----
-                if col in TRACKED_COLS and new_val != old_val:
+                from zoneinfo import ZoneInfo
 
-                    current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+if col in TRACKED_COLS and new_val != old_val:
 
-                    history_sheet.append_row([
-                        current_time,
-                        original.get("PART NO", ""),
-                        col,
-                        new_val,
-                        old_val,
-                        "Streamlit App"
-                    ])
+    current_time = datetime.now(
+        ZoneInfo("Asia/Singapore")
+    ).strftime("%Y-%m-%d %H:%M:%S")
 
-                    changed = True
+    history_sheet.append_row([
+        current_time,
+        original.get("PART NO", ""),
+        col,
+        new_val,
+        old_val,
+        "Streamlit App"
+    ])
+
+    changed = True
 
                 new_values.append(new_val)
 
