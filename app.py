@@ -61,7 +61,7 @@ st.markdown(f"""
 }}
 .kone span {{
     width: 50px;
-    height: 90px;
+    height: 70px;
     background: #005EB8;
     color: white;
     font-size: 36px;
