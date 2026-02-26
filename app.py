@@ -12,10 +12,15 @@ st.set_page_config(
     layout="wide"
 )
 
+import streamlit as st
+from datetime import datetime
+import pytz
+import time
+
 # ================= HEADER =================
 sg_tz = pytz.timezone("Asia/Singapore")
 
-# Header CSS and logo (unchanged)
+# Header CSS and logo
 st.markdown("""
 <style>
 .kone-header {
@@ -64,13 +69,20 @@ st.markdown("""
 # Placeholder for live date/time
 time_placeholder = st.empty()
 
-# Update the clock continuously in a Streamlit-friendly way
-while True:
+# This ensures the clock updates smoothly
+def update_time():
     now = datetime.now(sg_tz)
     datetime_str = now.strftime("%d %b %Y | %I:%M:%S %p")
     time_placeholder.markdown(f'<div class="date">{datetime_str}</div>', unsafe_allow_html=True)
-    time.sleep(1)  # wait 1 second before updating
-    st.experimental_rerun()
+
+# Initial display
+update_time()
+
+# Refresh every second without blocking
+st_autorefresh = st.empty()  # dummy placeholder to trigger rerun
+st.experimental_set_query_params(_refresh=int(time.time() * 1000))  # lightweight trigger
+time.sleep(1)
+st.experimental_rerun()
 
 
 # ================= CONFIG =================
