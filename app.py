@@ -43,52 +43,69 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ================= HEADER =================
-today = datetime.today()
-today_str = today.strftime("%d %b %Y")
+from datetime import datetime
+import pytz
+
+# Singapore Time
+sg_tz = pytz.timezone("Asia/Singapore")
+now = datetime.now(sg_tz)
+datetime_str = now.strftime("%d %b %Y | %I:%M:%S %p")
 
 st.markdown(f"""
 <style>
-.stApp {{
-    background: linear-gradient(135deg,#e6f0fa 0%,#ffffff 45%,#f2f7fc 100%);
-}}
-.header {{
+.kone-header {{
     text-align: center;
-    margin-bottom: 80px;
+    margin-top: 20px;
 }}
-.kone {{
+
+.kone-logo {{
     display: inline-flex;
-    gap: 6px;
+    gap: 8px;
+    margin-bottom: 10px;
 }}
-.kone span {{
-    width: 60px;
-    height: 90px;
-    background: #005EB8;
+
+.kone-logo div {{
+    width: 70px;
+    height: 70px;
+    background-color: #005EB8;
     color: white;
-    font-size: 40px;
+    font-size: 38px;
     font-weight: bold;
     display: flex;
     align-items: center;
     justify-content: center;
+    font-family: Arial, Helvetica, sans-serif;
 }}
-.subtitle {{
-    margin-top: 10px;
-    font-size: 20px;
+
+.kone-title {{
+    font-size: 28px;
     font-weight: 600;
+    margin-bottom: 5px;
 }}
-.date {{
-    font-size: 14px;
+
+.kone-date {{
+    font-size: 16px;
     color: #555;
 }}
 </style>
 
-<div class="header">
-    <div class="kone">
-        <span>K</span><span>O</span><span>N</span><span>E</span>
+<div class="kone-header">
+    <div class="kone-logo">
+        <div>K</div>
+        <div>O</div>
+        <div>N</div>
+        <div>E</div>
     </div>
-    <div class="subtitle">Lift Inventory Tracker</div>
-    <div class="date">{today_str}</div>
+
+    <div class="kone-title">
+        Lift Inventory Tracker
+    </div>
+
+    <div class="kone-date">
+        Singapore Time: {datetime_str}
+    </div>
 </div>
-""", unsafe_allow_html=True) 
+""", unsafe_allow_html=True)
 
 # ================= CONFIG =================
 SHEET_ID = "1PY9T5x0sqaDnHTZ5RoDx3LYGBu8bqOT7j4itdlC9yuE"
