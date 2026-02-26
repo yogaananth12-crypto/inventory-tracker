@@ -15,10 +15,12 @@ st.set_page_config(
 import streamlit as st
 from datetime import datetime
 import pytz
-import time
 
 # ================= HEADER =================
 sg_tz = pytz.timezone("Asia/Singapore")
+
+# Get today's date
+today_str = datetime.now(sg_tz).strftime("%d %b %Y")  # e.g., 26 Feb 2026
 
 # Header CSS and logo (unchanged)
 st.markdown("""
@@ -63,21 +65,9 @@ st.markdown("""
         <div>K</div><div>O</div><div>N</div><div>E</div>
     </div>
     <div class="subtitle">Lift Inventory Tracker</div>
+    <div class="date">{today}</div>
 </div>
-""", unsafe_allow_html=True)
-
-# Placeholder for live date/time
-time_placeholder = st.empty()
-
-# Update the time every second
-while True:
-    now = datetime.now(sg_tz)
-    datetime_str = now.strftime("%d %b %Y | %I:%M:%S %p")
-    time_placeholder.markdown(
-        f'<div class="date">{datetime_str}</div>',
-        unsafe_allow_html=True
-    )
-    time.sleep(1)
+""".format(today=today_str), unsafe_allow_html=True)
 
 
 # ================= CONFIG =================
