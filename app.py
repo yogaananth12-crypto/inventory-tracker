@@ -42,22 +42,21 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# ================= SINGAPORE TIME =================
+sg_timezone = pytz.timezone("Asia/Singapore")
+now_sg = datetime.now(sg_timezone)
+datetime_str = now_sg.strftime("%d %b %Y | %I:%M:%S %p")
+
 # ================= HEADER =================
 st.markdown(f"""
 <style>
 
-.stApp {{
-    background: linear-gradient(135deg,#e6f0fa 0%,#ffffff 45%,#f2f7fc 100%);
-}}
-
-/* Header Container */
 .kone-header {{
     text-align: center;
     padding-top: 30px;
     padding-bottom: 10px;
 }}
 
-/* KONE Logo Blocks */
 .kone-logo {{
     display: inline-flex;
     gap: 8px;
@@ -74,19 +73,15 @@ st.markdown(f"""
     align-items: center;
     justify-content: center;
     border-radius: 4px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.08);
 }}
 
-/* Title */
 .kone-title {{
     font-size: 30px;
     font-weight: 700;
-    letter-spacing: 0.5px;
-    color: #1f2d3d;
     margin-top: 15px;
+    color: #1f2d3d;
 }}
 
-/* Divider Line */
 .kone-divider {{
     width: 90px;
     height: 3px;
@@ -95,13 +90,10 @@ st.markdown(f"""
     border-radius: 5px;
 }}
 
-/* Date */
 .kone-date {{
     font-size: 15px;
     color: #6b7280;
     font-weight: 500;
-    letter-spacing: 0.3px;
-    margin-bottom: 10px;
 }}
 
 </style>
@@ -126,8 +118,9 @@ st.markdown(f"""
     </div>
 
 </div>
-
 """, unsafe_allow_html=True)
+
+
 
 # ================= CONFIG =================
 SHEET_ID = "1PY9T5x0sqaDnHTZ5RoDx3LYGBu8bqOT7j4itdlC9yuE"
