@@ -202,7 +202,7 @@ if st.button("Save Changes", use_container_width=True):
             if col in TRACKED_COLS and new_val != old_val:
 
                 history_sheet.append_row([
-                    datetime.now(sg_timezone).strftime("%Y-%m-%d %H:%M:%S"),
+                    datetime.now(sg_tz).strftime("%Y-%m-%d %H:%M:%S"),
                     original.get("PART NO", ""),
                     col,
                     old_val,
