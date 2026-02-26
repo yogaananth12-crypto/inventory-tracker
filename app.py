@@ -46,36 +46,26 @@ st.markdown(f"""
     justify-content: center;
     font-family: Arial, Helvetica, sans-serif;
 }}
-
-.kone-title {{
-    font-size: 28px;
+.subtitle {{
+    margin-top: 10px;
+    font-size: 20px;
     font-weight: 600;
-    margin-bottom: 5px;
 }}
-
-.kone-date {{
-    font-size: 16px;
+.date {{
+    font-size: 14px;
     color: #555;
 }}
 </style>
 
-<div class="kone-header">
-    <div class="kone-logo">
-        <div>K</div>
-        <div>O</div>
-        <div>N</div>
-        <div>E</div>
+<div class="header">
+    <div class="kone">
+        <span>K</span><span>O</span><span>N</span><span>E</span>
     </div>
-
-    <div class="kone-title">
-        Lift Inventory Tracker
-    </div>
-
-    <div class="kone-date">
-        Singapore Time: {datetime_str}
-    </div>
+    <div class="subtitle">Lift Inventory Tracker</div>
+    <div class="date">{today_str}</div>
 </div>
-""", unsafe_allow_html=True)
+""", unsafe_allow_html=True) 
+
 
 
 # ================= CONFIG =================
