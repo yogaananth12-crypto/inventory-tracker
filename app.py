@@ -164,6 +164,48 @@ fig.update_layout(
 
 st.plotly_chart(fig, use_container_width=True)
 
+# ================= ANIMATED STOCK TREND =================
+st.markdown("### 📈 Stock Movement Over Time")
+
+try:
+    history_anim = pd.DataFrame(history_sheet.get_all_records())
+
+    if not history_anim.empty and "DATE" in history_anim.columns:
+
+        history_anim["DATE"] = pd.to_datetime(history_anim["DATE"], errors="coerce")
+        history_anim = history_anim.sort_values("DATE")
+
+        # Only track QTY changes
+        qty_history = history_anim[history_anim["FIELD"] == "QTY"]
+
+        if not qty_history.empty:
+
+            qty_history["NEW VALUE"] = pd.to_numeric(
+                qty_history["NEW VALUE"], errors="coerce"
+            )
+
+            qty_history = qty_history.dropna(subset=["NEW VALUE"])
+
+            qty_history["DATE_STR"] = qty_history["DATE"].dt.strftime("%Y-%m-%d %H:%M")
+
+            anim_fig = px.bar(
+                qty_history,
+                x="PART NO",
+                y="NEW VALUE",
+                animation_frame="DATE_STR",
+                title="Quantity Changes Over Time",
+            )
+
+            anim_fig.update_layout(
+                xaxis_title="Part Number",
+                yaxis_title="Quantity",
+                transition={"duration": 800},
+            )
+
+            st.plotly_chart(anim_fig, use_container_width=True)
+
+except:
+    st.info("No stock movement data available yet.")
 # ================= SEARCH =================
 st.markdown('<div class="section-title">Inventory Table</div>', unsafe_allow_html=True)
 
