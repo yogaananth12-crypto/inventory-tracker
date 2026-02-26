@@ -37,15 +37,15 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ================= SINGAPORE TIME =================
+# ================= HEADER =================
 from datetime import datetime
 import pytz
 
+# Singapore Time
 sg_timezone = pytz.timezone("Asia/Singapore")
 now_sg = datetime.now(sg_timezone)
 datetime_str = now_sg.strftime("%d %b %Y  |  %I:%M:%S %p")
 
-# ================= PREMIUM HEADER =================
 st.markdown(f"""
 <style>
 
