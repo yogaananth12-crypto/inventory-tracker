@@ -20,7 +20,7 @@ import time
 # ================= HEADER =================
 sg_tz = pytz.timezone("Asia/Singapore")
 
-# Header CSS and logo
+# Header CSS and logo (unchanged)
 st.markdown("""
 <style>
 .kone-header {
@@ -69,20 +69,15 @@ st.markdown("""
 # Placeholder for live date/time
 time_placeholder = st.empty()
 
-# This ensures the clock updates smoothly
-def update_time():
+# Update the time every second
+while True:
     now = datetime.now(sg_tz)
     datetime_str = now.strftime("%d %b %Y | %I:%M:%S %p")
-    time_placeholder.markdown(f'<div class="date">{datetime_str}</div>', unsafe_allow_html=True)
-
-# Initial display
-update_time()
-
-# Refresh every second without blocking
-st_autorefresh = st.empty()  # dummy placeholder to trigger rerun
-st.experimental_set_query_params(_refresh=int(time.time() * 1000))  # lightweight trigger
-time.sleep(1)
-st.experimental_rerun()
+    time_placeholder.markdown(
+        f'<div class="date">{datetime_str}</div>',
+        unsafe_allow_html=True
+    )
+    time.sleep(1)
 
 
 # ================= CONFIG =================
