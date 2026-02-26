@@ -11,31 +11,29 @@ st.set_page_config(
     page_title="KONE Lift Inventory",
     layout="wide"
 )
-# ================= HEADER =================
+import streamlit as st
 from datetime import datetime
 import pytz
-import streamlit as st
+import time
 
-# Singapore Time
+# ================= HEADER =================
 sg_tz = pytz.timezone("Asia/Singapore")
-now = datetime.now(sg_tz)
-datetime_str = now.strftime("%d %b %Y | %I:%M:%S %p")  # e.g., 26 Feb 2026 | 09:15:32 AM
 
-# Header CSS and HTML (logo stays untouched)
-st.markdown(f"""
+# Header CSS and logo (unchanged)
+st.markdown("""
 <style>
-.kone-header {{
+.kone-header {
     text-align: center;
     margin-top: 20px;
-}}
+}
 
-.kone-logo {{
+.kone-logo {
     display: inline-flex;
     gap: 8px;
     margin-bottom: 10px;
-}}
+}
 
-.kone-logo div {{
+.kone-logo div {
     width: 70px;
     height: 70px;
     background-color: #005EB8;
@@ -46,17 +44,17 @@ st.markdown(f"""
     align-items: center;
     justify-content: center;
     font-family: Arial, Helvetica, sans-serif;
-}}
-.subtitle {{
+}
+.subtitle {
     margin-top: 10px;
     font-size: 20px;
     font-weight: 600;
-}}
-.date {{
+}
+.date {
     font-size: 14px;
     color: #555;
     margin-top: 5px;
-}}
+}
 </style>
 
 <div class="kone-header">
@@ -64,9 +62,21 @@ st.markdown(f"""
         <div>K</div><div>O</div><div>N</div><div>E</div>
     </div>
     <div class="subtitle">Lift Inventory Tracker</div>
-    <div class="date">{datetime_str}</div>
 </div>
 """, unsafe_allow_html=True)
+
+# Placeholder for live date/time
+time_placeholder = st.empty()
+
+# Update the time every second
+while True:
+    now = datetime.now(sg_tz)
+    datetime_str = now.strftime("%d %b %Y | %I:%M:%S %p")
+    time_placeholder.markdown(
+        f'<div class="date">{datetime_str}</div>',
+        unsafe_allow_html=True
+    )
+    time.sleep(1)
 
 
 # ================= CONFIG =================
