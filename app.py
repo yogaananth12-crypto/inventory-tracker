@@ -11,15 +11,6 @@ st.set_page_config(
     page_title="KONE Lift Inventory",
     layout="wide"
 )
-import streamlit as st
-from datetime import datetime
-import pytz
-import time
-
-import streamlit as st
-from datetime import datetime
-import pytz
-from streamlit_autorefresh import st_autorefresh  # pip install streamlit-autorefresh
 
 import streamlit as st
 from datetime import datetime
@@ -29,7 +20,7 @@ import time
 # Singapore timezone
 sg_tz = pytz.timezone("Asia/Singapore")
 
-# Header CSS and logo
+# Header CSS and logo (unchanged)
 st.markdown("""
 <style>
 .kone-header {
@@ -78,14 +69,13 @@ st.markdown("""
 # Placeholder for live date/time
 time_placeholder = st.empty()
 
-# Show live time (lightweight)
-now = datetime.now(sg_tz)
-datetime_str = now.strftime("%d %b %Y | %I:%M:%S %p")
-time_placeholder.markdown(f'<div class="date">{datetime_str}</div>', unsafe_allow_html=True)
-
-# Refresh every second
-time.sleep(1)
-st.experimental_rerun()
+# Show live time using a lightweight refresh
+while True:
+    now = datetime.now(sg_tz)
+    datetime_str = now.strftime("%d %b %Y | %I:%M:%S %p")
+    time_placeholder.markdown(f'<div class="date">{datetime_str}</div>', unsafe_allow_html=True)
+    time.sleep(1)
+    st.experimental_rerun()
 
 
 # ================= CONFIG =================
