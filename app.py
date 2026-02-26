@@ -23,20 +23,20 @@ sg_tz = pytz.timezone("Asia/Singapore")
 today_str = datetime.now(sg_tz).strftime("%d %b %Y")  # e.g., 26 Feb 2026
 
 # Header CSS and logo (unchanged)
-st.markdown("""
+st.markdown(f"""
 <style>
-.kone-header {
+.kone-header {{
     text-align: center;
     margin-top: 20px;
-}
+}}
 
-.kone-logo {
+.kone-logo {{
     display: inline-flex;
     gap: 8px;
     margin-bottom: 10px;
-}
+}}
 
-.kone-logo div {
+.kone-logo div {{
     width: 70px;
     height: 70px;
     background-color: #005EB8;
@@ -47,17 +47,17 @@ st.markdown("""
     align-items: center;
     justify-content: center;
     font-family: Arial, Helvetica, sans-serif;
-}
-.subtitle {
+}}
+.subtitle {{
     margin-top: 10px;
     font-size: 20px;
     font-weight: 600;
-}
-.date {
+}}
+.date {{
     font-size: 14px;
     color: #555;
     margin-top: 5px;
-}
+}}
 </style>
 
 <div class="kone-header">
@@ -65,9 +65,9 @@ st.markdown("""
         <div>K</div><div>O</div><div>N</div><div>E</div>
     </div>
     <div class="subtitle">Lift Inventory Tracker</div>
-    <div class="date">{today}</div>
+    <div class="date">{today_str}</div>
 </div>
-""".format(today=today_str), unsafe_allow_html=True)
+""", unsafe_allow_html=True)
 
 
 # ================= CONFIG =================
