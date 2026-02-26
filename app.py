@@ -16,7 +16,6 @@ st.set_page_config(
 from datetime import datetime
 import pytz
 
-# Singapore Time
 sg_timezone = pytz.timezone("Asia/Singapore")
 now_sg = datetime.now(sg_timezone)
 datetime_str = now_sg.strftime("%d %b %Y  |  %I:%M:%S %p")
@@ -46,7 +45,6 @@ st.markdown(f"""
     align-items: center;
     justify-content: center;
     border-radius: 6px;
-    box-shadow: 0 4px 12px rgba(0, 94, 184, 0.25);
 }}
 
 .kone-title {{
@@ -54,33 +52,27 @@ st.markdown(f"""
     font-weight: 800;
     margin-top: 20px;
     color: #1f2937;
-    letter-spacing: 0.5px;
 }}
 
 .kone-subtitle {{
     font-size: 16px;
     color: #6b7280;
     margin-top: 8px;
-    font-weight: 500;
 }}
 
 .kone-divider {{
     width: 120px;
     height: 4px;
-    background: linear-gradient(90deg,#005EB8,#3b82f6);
+    background: #005EB8;
     margin: 18px auto;
     border-radius: 10px;
 }}
 
 .kone-date {{
-    display: inline-block;
-    background: #f1f5f9;
-    padding: 8px 18px;
-    border-radius: 30px;
+    margin-top: 10px;
     font-size: 14px;
     font-weight: 600;
     color: #374151;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
 }}
 
 </style>
