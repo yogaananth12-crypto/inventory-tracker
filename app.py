@@ -12,31 +12,6 @@ st.set_page_config(
     layout="wide"
 )
 
-# ================= CUSTOM STYLE =================
-st.markdown("""
-<style>
-.block-container {
-    padding-top: 1rem;
-    padding-bottom: 2rem;
-}
-
-.metric-card {
-    background: white;
-    padding: 20px;
-    border-radius: 12px;
-    box-shadow: 0px 4px 12px rgba(0,0,0,0.08);
-    text-align: center;
-}
-
-.section-title {
-    font-size: 20px;
-    font-weight: 600;
-    margin-top: 60px;
-    margin-bottom: 10px;
-}
-</style>
-""", unsafe_allow_html=True)
-
 # ================= HEADER =================
 from datetime import datetime
 import pytz
