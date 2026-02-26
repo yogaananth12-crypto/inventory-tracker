@@ -11,16 +11,17 @@ st.set_page_config(
     page_title="KONE Lift Inventory",
     layout="wide"
 )
-
 # ================= HEADER =================
 from datetime import datetime
 import pytz
+import streamlit as st
 
 # Singapore Time
 sg_tz = pytz.timezone("Asia/Singapore")
 now = datetime.now(sg_tz)
-datetime_str = now.strftime("%d %b %Y | %I:%M:%S %p")
+datetime_str = now.strftime("%d %b %Y | %I:%M:%S %p")  # e.g., 26 Feb 2026 | 09:15:32 AM
 
+# Header CSS and HTML (logo stays untouched)
 st.markdown(f"""
 <style>
 .kone-header {{
@@ -54,22 +55,18 @@ st.markdown(f"""
 .date {{
     font-size: 14px;
     color: #555;
+    margin-top: 5px;
 }}
 </style>
 
-<div class="header">
-    <div class="kone">
-        <span>K</span><span>O</span><span>N</span><span>E</span>
+<div class="kone-header">
+    <div class="kone-logo">
+        <div>K</div><div>O</div><div>N</div><div>E</div>
     </div>
     <div class="subtitle">Lift Inventory Tracker</div>
-    # Get today's date
-today_str = date.today().strftime("%Y-%m-%d")  # Format: YYYY-MM-DD
-
-# Display it in Streamlit with custom HTML
-st.markdown(
-    f'<div class="date" style="font-size:16px; color:#333;">{today_str}</div>',
-    unsafe_allow_html=True
-)
+    <div class="date">{datetime_str}</div>
+</div>
+""", unsafe_allow_html=True)
 
 
 # ================= CONFIG =================
