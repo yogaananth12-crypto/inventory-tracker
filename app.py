@@ -62,10 +62,11 @@ st.markdown(f"""
         <span>K</span><span>O</span><span>N</span><span>E</span>
     </div>
     <div class="subtitle">Lift Inventory Tracker</div>
-    <div class="date">{today_str}</div>
+    <div class="kone-date">
+        Singapore Time: {datetime_str}
+    </div>
 </div>
-""", unsafe_allow_html=True) 
-
+""", unsafe_allow_html=True)
 
 
 # ================= CONFIG =================
