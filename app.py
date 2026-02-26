@@ -12,11 +12,6 @@ st.set_page_config(
     layout="wide"
 )
 
-# ================= TIMEZONE =================
-sg_timezone = pytz.timezone("Asia/Singapore")
-today = datetime.now(sg_timezone)
-today_str = today.strftime("%d %b %Y")
-
 # ================= CUSTOM STYLE =================
 st.markdown("""
 <style>
