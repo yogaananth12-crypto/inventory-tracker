@@ -43,68 +43,90 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ================= HEADER =================
-from datetime import datetime
-import pytz
-
-# Singapore Time
-sg_tz = pytz.timezone("Asia/Singapore")
-now = datetime.now(sg_tz)
-datetime_str = now.strftime("%d %b %Y | %I:%M:%S %p")
-
 st.markdown(f"""
 <style>
-.kone-header {{
-    text-align: center;
-    margin-top: 20px;
+
+.stApp {{
+    background: linear-gradient(135deg,#e6f0fa 0%,#ffffff 45%,#f2f7fc 100%);
 }}
 
+/* Header Container */
+.kone-header {{
+    text-align: center;
+    padding-top: 30px;
+    padding-bottom: 10px;
+}}
+
+/* KONE Logo Blocks */
 .kone-logo {{
     display: inline-flex;
     gap: 8px;
-    margin-bottom: 10px;
 }}
 
-.kone-logo div {{
-    width: 70px;
-    height: 70px;
-    background-color: #005EB8;
+.kone-logo span {{
+    width: 60px;
+    height: 60px;
+    background: #005EB8;
     color: white;
-    font-size: 38px;
-    font-weight: bold;
+    font-size: 34px;
+    font-weight: 800;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-family: Arial, Helvetica, sans-serif;
+    border-radius: 4px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.08);
 }}
 
+/* Title */
 .kone-title {{
-    font-size: 28px;
-    font-weight: 600;
-    margin-bottom: 5px;
+    font-size: 30px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: #1f2d3d;
+    margin-top: 15px;
 }}
 
-.kone-date {{
-    font-size: 16px;
-    color: #555;
+/* Divider Line */
+.kone-divider {{
+    width: 90px;
+    height: 3px;
+    background: #005EB8;
+    margin: 14px auto;
+    border-radius: 5px;
 }}
+
+/* Date */
+.kone-date {{
+    font-size: 15px;
+    color: #6b7280;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+    margin-bottom: 10px;
+}}
+
 </style>
 
 <div class="kone-header">
+
     <div class="kone-logo">
-        <div>K</div>
-        <div>O</div>
-        <div>N</div>
-        <div>E</div>
+        <span>K</span>
+        <span>O</span>
+        <span>N</span>
+        <span>E</span>
     </div>
 
     <div class="kone-title">
-        Lift Inventory Tracker
+        KONE Lift Inventory Management System
     </div>
 
+    <div class="kone-divider"></div>
+
     <div class="kone-date">
-        Singapore Time: {datetime_str}
+        Singapore Time | {datetime_str}
     </div>
+
 </div>
+
 """, unsafe_allow_html=True)
 
 # ================= CONFIG =================
