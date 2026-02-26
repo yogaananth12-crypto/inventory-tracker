@@ -16,93 +16,66 @@ st.set_page_config(
 from datetime import datetime
 import pytz
 
-sg_timezone = pytz.timezone("Asia/Singapore")
-now_sg = datetime.now(sg_timezone)
-datetime_str = now_sg.strftime("%d %b %Y  |  %I:%M:%S %p")
+# Singapore Time
+sg_tz = pytz.timezone("Asia/Singapore")
+now = datetime.now(sg_tz)
+datetime_str = now.strftime("%d %b %Y | %I:%M:%S %p")
 
 st.markdown(f"""
 <style>
-
 .kone-header {{
     text-align: center;
-    padding-top: 40px;
-    padding-bottom: 25px;
+    margin-top: 20px;
 }}
 
 .kone-logo {{
     display: inline-flex;
-    gap: 10px;
+    gap: 8px;
+    margin-bottom: 10px;
 }}
 
-.kone-logo span {{
-    width: 65px;
-    height: 65px;
-    background: #005EB8;
+.kone-logo div {{
+    width: 70px;
+    height: 70px;
+    background-color: #005EB8;
     color: white;
-    font-size: 36px;
-    font-weight: 800;
+    font-size: 38px;
+    font-weight: bold;
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 6px;
+    font-family: Arial, Helvetica, sans-serif;
 }}
 
 .kone-title {{
-    font-size: 34px;
-    font-weight: 800;
-    margin-top: 20px;
-    color: #1f2937;
-}}
-
-.kone-subtitle {{
-    font-size: 16px;
-    color: #6b7280;
-    margin-top: 8px;
-}}
-
-.kone-divider {{
-    width: 120px;
-    height: 4px;
-    background: #005EB8;
-    margin: 18px auto;
-    border-radius: 10px;
+    font-size: 28px;
+    font-weight: 600;
+    margin-bottom: 5px;
 }}
 
 .kone-date {{
-    margin-top: 10px;
-    font-size: 14px;
-    font-weight: 600;
-    color: #374151;
+    font-size: 16px;
+    color: #555;
 }}
-
 </style>
 
 <div class="kone-header">
-
     <div class="kone-logo">
-        <span>K</span>
-        <span>O</span>
-        <span>N</span>
-        <span>E</span>
+        <div>K</div>
+        <div>O</div>
+        <div>N</div>
+        <div>E</div>
     </div>
 
     <div class="kone-title">
-        Lift Inventory Management System
+        Lift Inventory Tracker
     </div>
-
-    <div class="kone-subtitle">
-        Smart Parts Tracking • Real-Time Stock Monitoring • Edit History Analytics
-    </div>
-
-    <div class="kone-divider"></div>
 
     <div class="kone-date">
-        🇸🇬 Singapore Time  |  {datetime_str}
+        Singapore Time: {datetime_str}
     </div>
-
 </div>
 """, unsafe_allow_html=True)
-
 
 
 # ================= CONFIG =================
