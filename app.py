@@ -12,12 +12,7 @@ st.set_page_config(
     layout="wide"
 )
 
-import streamlit as st
-from datetime import datetime
-import pytz
-import time
-
-# Singapore timezone
+# ================= HEADER =================
 sg_tz = pytz.timezone("Asia/Singapore")
 
 # Header CSS and logo (unchanged)
@@ -69,12 +64,12 @@ st.markdown("""
 # Placeholder for live date/time
 time_placeholder = st.empty()
 
-# Show live time using a lightweight refresh
+# Update the clock continuously in a Streamlit-friendly way
 while True:
     now = datetime.now(sg_tz)
     datetime_str = now.strftime("%d %b %Y | %I:%M:%S %p")
     time_placeholder.markdown(f'<div class="date">{datetime_str}</div>', unsafe_allow_html=True)
-    time.sleep(1)
+    time.sleep(1)  # wait 1 second before updating
     st.experimental_rerun()
 
 
