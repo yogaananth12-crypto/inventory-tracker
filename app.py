@@ -21,13 +21,15 @@ from datetime import datetime
 import pytz
 from streamlit_autorefresh import st_autorefresh  # pip install streamlit-autorefresh
 
-# ================= HEADER =================
+import streamlit as st
+from datetime import datetime
+import pytz
+import time
+
+# Singapore timezone
 sg_tz = pytz.timezone("Asia/Singapore")
 
-# Auto-refresh every 1000 ms (1 second)
-st_autorefresh(interval=1000, key="live_time")
-
-# Header CSS and logo (unchanged)
+# Header CSS and logo
 st.markdown("""
 <style>
 .kone-header {
@@ -73,10 +75,17 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# Live date/time
+# Placeholder for live date/time
+time_placeholder = st.empty()
+
+# Show live time (lightweight)
 now = datetime.now(sg_tz)
 datetime_str = now.strftime("%d %b %Y | %I:%M:%S %p")
-st.markdown(f'<div class="date">{datetime_str}</div>', unsafe_allow_html=True)
+time_placeholder.markdown(f'<div class="date">{datetime_str}</div>', unsafe_allow_html=True)
+
+# Refresh every second
+time.sleep(1)
+st.experimental_rerun()
 
 
 # ================= CONFIG =================
