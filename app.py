@@ -62,9 +62,14 @@ st.markdown(f"""
         <span>K</span><span>O</span><span>N</span><span>E</span>
     </div>
     <div class="subtitle">Lift Inventory Tracker</div>
-    <div class="date">{today_str}</div>
-</div>
-""", unsafe_allow_html=True)
+    # Get today's date
+today_str = date.today().strftime("%Y-%m-%d")  # Format: YYYY-MM-DD
+
+# Display it in Streamlit with custom HTML
+st.markdown(
+    f'<div class="date" style="font-size:16px; color:#333;">{today_str}</div>',
+    unsafe_allow_html=True
+)
 
 
 # ================= CONFIG =================
