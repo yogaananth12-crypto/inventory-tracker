@@ -38,57 +38,74 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ================= SINGAPORE TIME =================
+from datetime import datetime
+import pytz
+
 sg_timezone = pytz.timezone("Asia/Singapore")
 now_sg = datetime.now(sg_timezone)
-datetime_str = now_sg.strftime("%d %b %Y | %I:%M:%S %p")
+datetime_str = now_sg.strftime("%d %b %Y  |  %I:%M:%S %p")
 
-# ================= HEADER =================
+# ================= PREMIUM HEADER =================
 st.markdown(f"""
 <style>
 
 .kone-header {{
     text-align: center;
-    padding-top: 30px;
-    padding-bottom: 10px;
+    padding-top: 40px;
+    padding-bottom: 25px;
 }}
 
 .kone-logo {{
     display: inline-flex;
-    gap: 8px;
+    gap: 10px;
 }}
 
 .kone-logo span {{
-    width: 60px;
-    height: 60px;
+    width: 65px;
+    height: 65px;
     background: #005EB8;
     color: white;
-    font-size: 34px;
+    font-size: 36px;
     font-weight: 800;
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 4px;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0, 94, 184, 0.25);
 }}
 
 .kone-title {{
-    font-size: 30px;
-    font-weight: 700;
-    margin-top: 15px;
-    color: #1f2d3d;
+    font-size: 34px;
+    font-weight: 800;
+    margin-top: 20px;
+    color: #1f2937;
+    letter-spacing: 0.5px;
+}}
+
+.kone-subtitle {{
+    font-size: 16px;
+    color: #6b7280;
+    margin-top: 8px;
+    font-weight: 500;
 }}
 
 .kone-divider {{
-    width: 90px;
-    height: 3px;
-    background: #005EB8;
-    margin: 14px auto;
-    border-radius: 5px;
+    width: 120px;
+    height: 4px;
+    background: linear-gradient(90deg,#005EB8,#3b82f6);
+    margin: 18px auto;
+    border-radius: 10px;
 }}
 
 .kone-date {{
-    font-size: 15px;
-    color: #6b7280;
-    font-weight: 500;
+    display: inline-block;
+    background: #f1f5f9;
+    padding: 8px 18px;
+    border-radius: 30px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #374151;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
 }}
 
 </style>
@@ -103,13 +120,17 @@ st.markdown(f"""
     </div>
 
     <div class="kone-title">
-        KONE Lift Inventory Management System
+        Lift Inventory Management System
+    </div>
+
+    <div class="kone-subtitle">
+        Smart Parts Tracking • Real-Time Stock Monitoring • Edit History Analytics
     </div>
 
     <div class="kone-divider"></div>
 
     <div class="kone-date">
-        Singapore Time | {datetime_str}
+        🇸🇬 Singapore Time  |  {datetime_str}
     </div>
 
 </div>
