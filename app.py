@@ -16,8 +16,16 @@ from datetime import datetime
 import pytz
 import time
 
+import streamlit as st
+from datetime import datetime
+import pytz
+from streamlit_autorefresh import st_autorefresh  # pip install streamlit-autorefresh
+
 # ================= HEADER =================
 sg_tz = pytz.timezone("Asia/Singapore")
+
+# Auto-refresh every 1000 ms (1 second)
+st_autorefresh(interval=1000, key="live_time")
 
 # Header CSS and logo (unchanged)
 st.markdown("""
@@ -65,18 +73,10 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# Placeholder for live date/time
-time_placeholder = st.empty()
-
-# Update the time every second
-while True:
-    now = datetime.now(sg_tz)
-    datetime_str = now.strftime("%d %b %Y | %I:%M:%S %p")
-    time_placeholder.markdown(
-        f'<div class="date">{datetime_str}</div>',
-        unsafe_allow_html=True
-    )
-    time.sleep(1)
+# Live date/time
+now = datetime.now(sg_tz)
+datetime_str = now.strftime("%d %b %Y | %I:%M:%S %p")
+st.markdown(f'<div class="date">{datetime_str}</div>', unsafe_allow_html=True)
 
 
 # ================= CONFIG =================
